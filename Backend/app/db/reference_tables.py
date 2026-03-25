@@ -18,6 +18,50 @@ from supabase import Client
 
 log = logging.getLogger(__name__)
 
+
+def populate_from_db(client: Client, student_id: str, profile_data: dict) -> dict:
+    """
+    Populate reference tables using data already stored in Supabase canonical tables.
+    Called when sync is skipped (data is fresh) so reference tables still fill.
+    """
+    # Read existing DB rows for each category
+    att_rows = (
+        client.table("attendance_summary")
+        .select("subject_code")
+        .eq("student_id", student_id)
+        .execute()
+    ).data or []
+
+    marks_rows = (
+        client.table("internal_marks_events")
+        .select("subject_code")
+        .eq("student_id", student_id)
+        .execute()
+    ).data or []
+
+    tt_rows = (
+        client.table("timetable_slots")
+        .select("subject_code,teacher_name_raw")
+        .eq("student_id", student_id)
+        .execute()
+    ).data or []
+
+    uni_rows = (
+        client.table("exam_sessions")
+        .select("exam_id,exam_name,exam_year")
+        .execute()
+    ).data or []
+
+    return populate_reference_tables(
+        client,
+        student_id=student_id,
+        profile_data=profile_data,
+        timetable_rows=tt_rows,
+        university_result_rows=uni_rows,
+        attendance_rows=att_rows,
+        marks_rows=marks_rows,
+    )
+
 # ── Semester number extraction ────────────────────────────────────────────────
 _ORDINAL_MAP = {
     "first": 1, "second": 2, "third": 3, "fourth": 4,
@@ -225,7 +269,7 @@ def populate_reference_tables(
     for name in teacher_names:
         if not _teacher_exists(client, name):
             client.table("teachers").insert(
-                {"full_name": name, "department_id": dept_id}
+                {"full_name": name}
             ).execute()
     stats["teachers"] = len(teacher_names)
     log.info("Processed %d teachers", len(teacher_names))

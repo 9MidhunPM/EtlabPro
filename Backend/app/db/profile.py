@@ -134,30 +134,29 @@ def upsert_profile(client: Client, student_id: str, profile: dict) -> dict:
             extra[field] = v
 
     # ── student_profile upsert ────────────────────────────────────────────
+    # NOTE: department_id / programme_id / current_semester_id are intentionally
+    # EXCLUDED here — they are resolved and written by reference_tables.py.
+    # Including them as NULL would silently erase what reference_tables set.
     profile_payload = {
-        "student_id":   student_id,
-        "full_name":    _g("full_name"),
-        "gender":       _g("gender"),
+        "student_id":    student_id,
+        "full_name":     _g("full_name"),
+        "gender":        _g("gender"),
         "date_of_birth": _normalise_date(_g("date_of_birth")),
-        "blood_group":  _g("blood_group"),
-        "nationality":  _g("nationality"),
-        "religion":     _g("religion"),
-        "community":    _g("community"),
-        "caste":        _g("caste"),
+        "blood_group":   _g("blood_group"),
+        "nationality":   _g("nationality"),
+        "religion":      _g("religion"),
+        "community":     _g("community"),
+        "caste":         _g("caste"),
         "mother_tongue": _g("mother_tongue"),
-        "email":        _g("email"),
-        "phone":        _g("phone"),
-        "address":      _g("address"),
-        "district":     _g("district"),
-        "state":        _g("state"),
-        "pin_code":     _g("pin_code"),
-        # FK refs set to NULL until a resolution layer is added
-        "department_id":         None,
-        "programme_id":          None,
-        "current_semester_id":   None,
-        "extra_fields":          extra,
-        "scraped_at":            profile.get("scraped_at") or _now(),
-        "updated_at":            _now(),
+        "email":         _g("email"),
+        "phone":         _g("phone"),
+        "address":       _g("address"),
+        "district":      _g("district"),
+        "state":         _g("state"),
+        "pin_code":      _g("pin_code"),
+        "extra_fields":  extra,
+        "scraped_at":    profile.get("scraped_at") or _now(),
+        "updated_at":    _now(),
     }
 
     resp = (

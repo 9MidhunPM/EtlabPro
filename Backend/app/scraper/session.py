@@ -1,13 +1,10 @@
-"""
-scraper.session
-───────────────
-Handles login to sahrdaya.etlab.in and returns an authenticated
-requests.Session.  No scraping logic lives here.
-"""
 import re
 import logging
+import time
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from app.config import get_settings
 
@@ -24,6 +21,14 @@ _HEADERS = {
         "Chrome/125.0.0.0 Safari/537.36"
     ),
 }
+
+_RETRY_STRATEGY = Retry(
+    total=4,
+    backoff_factor=1.5,          # waits 0s, 1.5s, 3s, 6s between retries
+    status_forcelist={500, 502, 503, 504},
+    allowed_methods={"GET", "POST"},
+    raise_on_status=False,
+)
 
 
 def _extract_csrf(html: str) -> str | None:
@@ -56,10 +61,15 @@ def create_session(username: str, password: str) -> requests.Session:
     """
     Log in with the supplied credentials and return an authenticated session.
     Raises RuntimeError on login failure.
-    Credentials are used in-memory only — never persisted.
+    Includes automatic retry with exponential backoff for transient SSL/network errors.
     """
     session = requests.Session()
     session.headers.update(_HEADERS)
+
+    # Mount retry adapter for both http and https
+    adapter = HTTPAdapter(max_retries=_RETRY_STRATEGY)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
 
     log.info("Fetching login page …")
     resp = session.get(LOGIN_URL, timeout=TIMEOUT)

@@ -147,18 +147,56 @@ def sync_all(
 
     # ── Reference tables (departments, programmes, semesters, teachers) ─
     # Always run — fast upserts, uses already-scraped data.
+    # Falls back to reading from DB if sync was skipped (data already fresh).
     try:
-        ref_stats = ref_db.populate_reference_tables(
-            client,
-            student_id            = student_id,
-            profile_data          = profile_data,
-            timetable_rows        = _scraped["tt_rows"],
-            university_result_rows= _scraped["uni_rows"],
-            attendance_rows       = _scraped["att_rows"],
-            marks_rows            = _scraped["marks_rows"],
-        )
+        any_scraped = any(len(v) > 0 for v in _scraped.values())
+        if any_scraped:
+            ref_stats = ref_db.populate_reference_tables(
+                client,
+                student_id            = student_id,
+                profile_data          = profile_data,
+                timetable_rows        = _scraped["tt_rows"],
+                university_result_rows= _scraped["uni_rows"],
+                attendance_rows       = _scraped["att_rows"],
+                marks_rows            = _scraped["marks_rows"],
+            )
+        else:
+            # All categories were skipped — read from existing DB tables
+            ref_stats = ref_db.populate_from_db(client, student_id, profile_data)
         summary["reference_tables"] = ref_stats
         log.info("Reference tables populated: %s", ref_stats)
+
+        # ── Enrich subjects: fix rows where subject_name = subject_code ──
+        # Read all university results which carry proper names, upsert subjects
+        try:
+            results_rows = (
+                client.table("university_exam_results")
+                .select("subject_code,raw_subject_name")
+                .execute()
+            ).data or []
+            timetable_rows_db = (
+                client.table("timetable_slots")
+                .select("subject_code,raw_subject_name")
+                .eq("student_id", student_id)
+                .not_.is_("subject_code", "null")
+                .not_.is_("raw_subject_name", "null")
+                .execute()
+            ).data or []
+            enrichment = {}
+            for r in results_rows + timetable_rows_db:
+                code = r.get("subject_code")
+                name = r.get("raw_subject_name")
+                if code and name and name != code:
+                    enrichment[code] = name
+            if enrichment:
+                client.table("subjects").upsert(
+                    [{"subject_code": c, "subject_name": n} for c, n in enrichment.items()],
+                    on_conflict="subject_code",
+                ).execute()
+                log.info("Enriched %d subject names from exam/timetable data", len(enrichment))
+        except Exception as exc:
+            log.warning("Subject enrichment failed (non-fatal): %s", exc)
+
     except Exception as exc:
         log.warning("Reference table population failed (non-fatal): %s", exc)
 
