@@ -11,11 +11,12 @@ class AppConstants {
     defaultValue: '',
   );
 
-  static const String _defaultBaseUrl = 'https://etlabapp-backendv1.onrender.com';
-
   static String get baseUrl {
     final raw = (dotenv.env['API_BASE_URL'] ?? _buildTimeBaseUrl).trim();
-    final resolved = raw.isEmpty ? _defaultBaseUrl : raw;
+    String resolved = raw;
+    if (resolved.endsWith('/')) {
+      resolved = resolved.substring(0, resolved.length - 1);
+    }
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       if (resolved.contains('://localhost')) {
         return resolved.replaceFirst('://localhost', '://10.0.2.2');

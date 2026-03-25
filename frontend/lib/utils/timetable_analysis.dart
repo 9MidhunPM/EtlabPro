@@ -4,7 +4,7 @@
 Map<String, int> getSubjectClassesPerWeek(List<dynamic> slots) {
   final counts = <String, int>{};
   for (final s in slots) {
-    final name = (s['subject_name'] ?? s['subject_code'] ?? '') as String;
+    final name = (s['raw_subject_name'] ?? s['subject_code'] ?? '') as String;
     if (name.isEmpty) continue;
     counts[name] = (counts[name] ?? 0) + 1;
   }
@@ -15,7 +15,7 @@ Map<String, int> getSubjectClassesPerWeek(List<dynamic> slots) {
 Map<String, int> getSubjectTotalHoursFromAttendance(List<dynamic> attendance) {
   final hours = <String, int>{};
   for (final a in attendance) {
-    final name = (a['subject_name'] ?? a['subject_code'] ?? '') as String;
+    final name = (a['raw_subject_name'] ?? a['subject_code'] ?? '') as String;
     final total = a['classes_total'] as int? ?? 0;
     if (name.isNotEmpty) hours[name] = total;
   }

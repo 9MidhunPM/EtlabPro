@@ -229,7 +229,7 @@ class _ExamGroup extends StatelessWidget {
               children: [
                 ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                  title: Text(r['subject_name'] ?? r['subject_code'] ?? '—',
+                  title: Text(r['raw_subject_name'] ?? r['subject_code'] ?? '—',
                       style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: Text(r['subject_code'] ?? '', style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
                   trailing: Column(

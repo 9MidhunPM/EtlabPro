@@ -454,7 +454,7 @@ class _RiskAlertCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Focus on: ${lowestRows.map((r) => (r['subject_code'] ?? r['subject_name'] ?? 'Unknown').toString()).join(', ')}',
+            'Focus on: ${lowestRows.map((r) => (r['subject_code'] ?? r['raw_subject_name'] ?? 'Unknown').toString()).join(', ')}',
             style: TextStyle(fontSize: 12.5, color: scheme.onErrorContainer),
           ),
         ],
@@ -477,7 +477,7 @@ class _SubjectTile extends StatelessWidget {
       : pct >= 90
             ? Colors.green.shade700
             : scheme.primary;
-    final name = row['subject_name'] ?? row['subject_code'] ?? '—';
+    final name = row['raw_subject_name'] ?? row['subject_code'] ?? '—';
     final attended = (row['classes_attended'] as num?)?.toInt();
     final total = (row['classes_total'] as num?)?.toInt();
     final requiredToRecover = _classesNeededToReach75(attended, total);

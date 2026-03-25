@@ -55,7 +55,7 @@ ClassInfo _formatPeriod(Map<String, dynamic>? slot, int period) {
     return ClassInfo(subject: 'Free Period', timing: timing, isFree: true);
   }
   return ClassInfo(
-    subject: slot['subject_name'] ?? slot['subject_code'] ?? 'Free Period',
+    subject: slot['raw_subject_name'] ?? slot['subject_code'] ?? 'Free Period',
     teacher: slot['teacher'] as String?,
     timing: AppConstants.periodTimings[period]?['display'] ?? '',
     isFree: false,

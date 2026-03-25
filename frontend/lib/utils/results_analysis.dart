@@ -102,7 +102,7 @@ List<SubjectAnalysis> getResultsAnalysis(
 
     result.add(SubjectAnalysis(
       subjectCode: code,
-      subjectName: m['subject_name'] ?? code,
+      subjectName: m['raw_subject_name'] ?? code,
       cat1: cat1,
       attendanceMarks: attMarks,
       attendancePercentage: attPct,

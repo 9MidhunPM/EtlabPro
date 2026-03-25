@@ -18,9 +18,19 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
   static const _ordinal = ['Ist', 'IInd', 'IIIrd', 'IVth', 'Vth', 'VIth', 'VIIth', 'VIIIth'];
 
   static int _extractSemester(dynamic row) {
-    final semesterField = (row['semester'] ?? '').toString();
-    final labelField = (row['semester_label'] ?? row['exam_name'] ?? '').toString();
+    final semesterField = (row['semester'] ?? '').toString().toLowerCase();
+    final labelField = (row['semester_label'] ?? row['exam_name'] ?? '').toString().toLowerCase();
     final combined = '$semesterField $labelField';
+    
+    if (combined.contains('first')) return 1;
+    if (combined.contains('second')) return 2;
+    if (combined.contains('third')) return 3;
+    if (combined.contains('fourth')) return 4;
+    if (combined.contains('fifth')) return 5;
+    if (combined.contains('sixth')) return 6;
+    if (combined.contains('seventh')) return 7;
+    if (combined.contains('eighth')) return 8;
+
     final m = RegExp(r'([1-8])').firstMatch(combined);
     return m != null ? int.parse(m.group(1)!) : 99;
   }
@@ -210,7 +220,7 @@ class _SemesterPage extends StatelessWidget {
                 children: [
                   ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                    title: Text(r['subject_name'] ?? r['subject_code'] ?? '—',
+                    title: Text(r['raw_subject_name'] ?? r['subject_code'] ?? '—',
                         style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
                         maxLines: 1, overflow: TextOverflow.ellipsis),
                     subtitle: Text(

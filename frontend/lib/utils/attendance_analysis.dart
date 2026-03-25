@@ -115,7 +115,7 @@ AttendanceAnalysis getComprehensiveAnalysis(
 
   for (final a in attendance) {
     final code = (a['subject_code'] ?? '') as String;
-    final name = (a['subject_name'] ?? code) as String;
+    final name = (a['raw_subject_name'] ?? code) as String;
     final present = (a['classes_attended'] as num?)?.toInt() ?? 0;
     final total = (a['classes_total'] as num?)?.toInt() ?? 0;
     final pct = (a['percentage'] as num?)?.toDouble() ?? 0;

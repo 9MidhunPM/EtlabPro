@@ -131,9 +131,12 @@ class _TimetableTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final daySlots = allSlots
-        .where((s) => (s['day'] as String?)?.toLowerCase() == selectedDay.toLowerCase())
+        .where((s) {
+          final dayStr = s['day_of_week'] as String?;
+          return dayStr?.toLowerCase() == selectedDay.substring(0, 3).toLowerCase();
+        })
         .toList()
-      ..sort((a, b) => ((a['period'] as int?) ?? 0).compareTo((b['period'] as int?) ?? 0));
+      ..sort((a, b) => ((a['period_number'] as int?) ?? 0).compareTo((b['period_number'] as int?) ?? 0));
 
     return Column(
       children: [
@@ -196,13 +199,13 @@ class _SlotCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final period = slot['period'] ?? '—';
+    final period = slot['period_number'] ?? '—';
     final time = slot['period_time'] ?? '';
-    final name = slot['subject_name'] ?? slot['subject_code'] ?? 'Free';
+    final name = slot['raw_subject_name'] ?? slot['subject_code'] ?? 'Free';
     final code = slot['subject_code'] ?? '';
-    final teacher = slot['teacher'] ?? '';
+    final teacher = slot['teacher_name_raw'] ?? '';
     final classType = slot['class_type'] ?? '';
-    final isFree = name == 'Free' || slot['subject_code'] == null;
+    final isFree = name == 'Free Period' || name == 'Free' || slot['subject_code'] == null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

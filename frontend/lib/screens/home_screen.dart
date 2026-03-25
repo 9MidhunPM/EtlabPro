@@ -585,7 +585,7 @@ class _AttendanceSummaryCard extends StatelessWidget {
                     child: Row(
                       children: [
                         Expanded(
-                            child: Text(r['subject_name'] ?? r['subject_code'] ?? '—',
+                            child: Text(r['raw_subject_name'] ?? r['subject_code'] ?? '—',
                                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis)),
@@ -724,7 +724,7 @@ class _ResultsOverviewCard extends StatelessWidget {
                     child: Row(
                       children: [
                         Expanded(
-                          child: Text(r['subject_code'] ?? r['subject_name'] ?? '—',
+                          child: Text(r['subject_code'] ?? r['raw_subject_name'] ?? '—',
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis),
@@ -761,7 +761,7 @@ class _ProfileInfoCard extends StatelessWidget {
       child: Column(
         children: [
           _row(Icons.badge_rounded, 'Name', summary!['full_name'], scheme),
-          _row(Icons.school_rounded, 'Semester', summary!['semester'] != null ? 'Semester ${summary!['semester']}' : null, scheme),
+          _row(Icons.school_rounded, 'Semester', summary!['semester'], scheme),
           _row(Icons.numbers_rounded, 'SHR Number', summary!['roll_number'], scheme),
           _row(Icons.account_balance_rounded, 'Department', summary!['department'], scheme),
         ],
