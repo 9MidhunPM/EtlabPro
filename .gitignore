@@ -1,0 +1,72 @@
+# ── Flutter / Dart ────────────────────────────────────────────────────
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+*.g.dart
+*.freezed.dart
+
+# Flutter web
+/web/
+
+# Generated files
+coverage/
+doc/api/
+
+# ── Python backend ────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+.Python
+.venv/
+venv/
+env/
+.env
+*.env
+Backend/.env
+
+# ── IDE / Editor ──────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ── OS ────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── Credentials & secrets ─────────────────────────────────────────────
+*.key
+*.pem
+*.p12
+*.pfx
+secrets.dart
+google-services.json
+GoogleService-Info.plist
+
+# ── Old React Native frontend ─────────────────────────────────────────
+frontend OLD IN REACT/
+
+# ── Node (inside React project) ───────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.expo/
+.expo-shared/
