@@ -30,9 +30,13 @@ from app.models.schemas import (
     AttendanceSyncRequest,
     SyncSummary,
     ProfileResponse,
+    InternalMarkRow,
     InternalMarksResponse,
+    AttendanceRow,
     AttendanceResponse,
+    TimetableSlot,
     TimetableResponse,
+    UniversityResultRow,
     UniversityResultsResponse,
     SubjectsResponse,
     StudentSummary,
@@ -221,7 +225,10 @@ def get_profile(roll: str, user: dict = Depends(get_current_user)) -> ProfileRes
     if not data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="Profile not found. Login first.")
-    return ProfileResponse(roll_number=roll, **data)
+    # Exclude internal DB columns not in ProfileResponse schema
+    exclude = {"id", "student_id", "department_id", "programme_id", "current_semester_id", "created_at"}
+    filtered = {k: v for k, v in data.items() if k not in exclude}
+    return ProfileResponse(**filtered)
 
 
 # ── GET /internal-results/{roll} ─────────────────────────────────────
@@ -234,7 +241,9 @@ def get_profile(roll: str, user: dict = Depends(get_current_user)) -> ProfileRes
 def get_internal_results(roll: str, user: dict = Depends(get_current_user)) -> InternalMarksResponse:
     student = _require_student(roll)
     rows    = marks_db.get_marks(get_supabase(), student["id"])
-    return InternalMarksResponse(roll_number=roll, marks=rows)
+    marks   = [InternalMarkRow(**{k: v for k, v in r.items()
+                                  if k in InternalMarkRow.model_fields}) for r in rows]
+    return InternalMarksResponse(roll_number=roll, marks=marks)
 
 
 # ── GET /university-results/{roll} ───────────────────────────────────
@@ -247,7 +256,9 @@ def get_internal_results(roll: str, user: dict = Depends(get_current_user)) -> I
 def get_university_results(roll: str, user: dict = Depends(get_current_user)) -> UniversityResultsResponse:
     student = _require_student(roll)
     rows    = uni_db.get_university_results(get_supabase(), student["id"])
-    return UniversityResultsResponse(roll_number=roll, results=rows)
+    results = [UniversityResultRow(**{k: v for k, v in r.items()
+                                      if k in UniversityResultRow.model_fields}) for r in rows]
+    return UniversityResultsResponse(roll_number=roll, results=results)
 
 
 # ── GET /timetable/{roll} ────────────────────────────────────────────
@@ -259,7 +270,9 @@ def get_university_results(roll: str, user: dict = Depends(get_current_user)) ->
 )
 def get_timetable(roll: str, day: str | None = None, user: dict = Depends(get_current_user)) -> TimetableResponse:
     student = _require_student(roll)
-    slots   = tt_db.get_timetable(get_supabase(), student["id"], day=day)
+    raw     = tt_db.get_timetable(get_supabase(), student["id"], day=day)
+    slots   = [TimetableSlot(**{k: v for k, v in r.items()
+                                if k in TimetableSlot.model_fields}) for r in raw]
     return TimetableResponse(roll_number=roll, slots=slots)
 
 
@@ -273,7 +286,9 @@ def get_timetable(roll: str, day: str | None = None, user: dict = Depends(get_cu
 def get_attendance(roll: str, user: dict = Depends(get_current_user)) -> AttendanceResponse:
     student = _require_student(roll)
     rows    = att_db.get_attendance(get_supabase(), student["id"])
-    return AttendanceResponse(roll_number=roll, attendance=rows)
+    attendance = [AttendanceRow(**{k: v for k, v in r.items()
+                                   if k in AttendanceRow.model_fields}) for r in rows]
+    return AttendanceResponse(roll_number=roll, attendance=attendance)
 
 
 # ── GET /subjects ─────────────────────────────────────────────────────
@@ -314,3 +329,81 @@ def get_summary(roll: str, user: dict = Depends(get_current_user)) -> StudentSum
             detail=f"No data found for '{roll}'. Login first.",
         )
     return StudentSummary(**resp.data[0])
+
+
+# ── GET /departments ───────────────────────────────────────────────────
+
+@router.get(
+    "/departments",
+    summary="List all departments",
+    response_model=list[dict],
+)
+def get_departments(user: dict = Depends(get_current_user)) -> list[dict]:
+    resp = get_supabase().table("departments").select("*").order("name").execute()
+    return resp.data or []
+
+
+# ── GET /programmes ────────────────────────────────────────────────────
+
+@router.get(
+    "/programmes",
+    summary="List all programmes",
+    response_model=list[dict],
+)
+def get_programmes(user: dict = Depends(get_current_user)) -> list[dict]:
+    resp = get_supabase().table("programmes").select("*").order("name").execute()
+    return resp.data or []
+
+
+# ── GET /academic-years ────────────────────────────────────────────────
+
+@router.get(
+    "/academic-years",
+    summary="List all academic years",
+    response_model=list[dict],
+)
+def get_academic_years(user: dict = Depends(get_current_user)) -> list[dict]:
+    resp = (
+        get_supabase()
+        .table("academic_years")
+        .select("*")
+        .order("start_year")
+        .execute()
+    )
+    return resp.data or []
+
+
+# ── GET /semesters ─────────────────────────────────────────────────────
+
+@router.get(
+    "/semesters",
+    summary="List all semesters",
+    response_model=list[dict],
+)
+def get_semesters(user: dict = Depends(get_current_user)) -> list[dict]:
+    resp = (
+        get_supabase()
+        .table("semesters")
+        .select("*")
+        .order("semester_number")
+        .execute()
+    )
+    return resp.data or []
+
+
+# ── GET /teachers ──────────────────────────────────────────────────────
+
+@router.get(
+    "/teachers",
+    summary="List all teachers seen in timetable scrapes",
+    response_model=list[dict],
+)
+def get_teachers(user: dict = Depends(get_current_user)) -> list[dict]:
+    resp = (
+        get_supabase()
+        .table("teachers")
+        .select("*")
+        .order("full_name")
+        .execute()
+    )
+    return resp.data or []

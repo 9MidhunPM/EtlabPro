@@ -32,6 +32,10 @@ env/
 *.env
 Backend/.env
 
+# ── Scrape output dump (contains student data — never commit) ──────────
+Backend/scrape_output.txt
+scrape_output.txt
+
 # ── IDE / Editor ──────────────────────────────────────────────────────
 .idea/
 .vscode/

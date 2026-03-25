@@ -2,6 +2,7 @@
 models.schemas
 ──────────────
 Pydantic v2 models for request/response validation.
+Aligned with canonical v3 schema table names and column names.
 """
 from __future__ import annotations
 
@@ -38,105 +39,42 @@ class OKResponse(BaseModel):
 # ── Profile ──────────────────────────────────────────────────────────
 
 class ProfileResponse(BaseModel):
-    # Core identity
-    full_name:                      str | None = None
-    gender:                         str | None = None
-    date_of_birth:                  str | None = None
-    place_of_birth:                 str | None = None
-    blood_group:                    str | None = None
-    nationality:                    str | None = None
-    nativity:                       str | None = None
-    religion:                       str | None = None
-    community:                      str | None = None
-    caste:                          str | None = None
-    mother_tongue:                  str | None = None
-    # Academic identifiers
-    roll_number:                    str | None = None
-    admission_number:               str | None = None
-    sr_no:                          str | None = None
-    regno:                          str | None = None
-    academic_year:                  str | None = None
-    date_of_admission:              str | None = None
-    admission_quota:                str | None = None
-    admission_type:                 str | None = None
-    reservation_category:           str | None = None
-    reservation_category_eligible:  str | None = None
-    lateral_entry_roll_no:          str | None = None
-    abc_id:                         str | None = None
-    aadhaar_no:                     str | None = None
-    department:                     str | None = None
-    programme:                      str | None = None
-    semester:                       str | None = None
-    is_hosteler:                    str | None = None
+    # Core identity (canonical student_profile columns)
+    full_name:       str | None = None
+    gender:          str | None = None
+    date_of_birth:   str | None = None
+    blood_group:     str | None = None
+    nationality:     str | None = None
+    religion:        str | None = None
+    community:       str | None = None
+    caste:           str | None = None
+    mother_tongue:   str | None = None
     # Contact
-    email:                          str | None = None
-    phone:                          str | None = None
-    phone_office:                   str | None = None
+    email:           str | None = None
+    phone:           str | None = None
     # Address
-    address:                        str | None = None
-    street:                         str | None = None
-    address_line_2:                 str | None = None
-    district:                       str | None = None
-    state:                          str | None = None
-    pin_code:                       str | None = None
-    boarding_point:                 str | None = None
-    # Father / guardian
-    guardian_name:                  str | None = None
-    guardian_phone:                 str | None = None
-    father_occupation:              str | None = None
-    father_education:               str | None = None
-    # Mother
-    mother_name:                    str | None = None
-    mother_phone:                   str | None = None
-    mother_occupation:              str | None = None
-    mother_education:               str | None = None
-    annual_income:                  str | None = None
-    # Bank / finance
-    bank_name:                      str | None = None
-    bank_account_no:                str | None = None
-    bank_ifsc:                      str | None = None
-    fee_concession:                 str | None = None
-    # Entrance / qualifications
-    entrance_rank:                  str | None = None
-    entrance_roll_no:               str | None = None
-    entrance_exam_score:            str | None = None
-    nata_score:                     str | None = None
-    plus_two_board:                 str | None = None
-    last_school:                    str | None = None
-    hss_year:                       str | None = None
-    sslc_pct:                       str | None = None
-    sslc_year:                      str | None = None
-    plus_two_overall_pct:           str | None = None
-    maths_mark:                     str | None = None
-    maths_pct:                      str | None = None
-    physics_mark:                   str | None = None
-    physics_pct:                    str | None = None
-    chemistry_mark:                 str | None = None
-    chemistry_pct:                  str | None = None
-    pcm_pct:                        str | None = None
-    plus_two_total_mark:            str | None = None
-    # Physical identification
-    identification_mark_1:          str | None = None
-    identification_mark_2:          str | None = None
-    tc_date:                        str | None = None
-    tc_no:                          str | None = None
-    # Catch-all for any future unmapped fields
-    extra_fields:                   dict[str, Any] = {}
-    scraped_at:                     str | None = None
-    updated_at:                     str | None = None
+    address:         str | None = None
+    district:        str | None = None
+    state:           str | None = None
+    pin_code:        str | None = None
+    # Catch-all for any future / non-canonical fields
+    extra_fields:    dict[str, Any] = {}
+    scraped_at:      str | None = None
+    updated_at:      str | None = None
 
 
 # ── Internal Marks ───────────────────────────────────────────────────
 
 class InternalMarkRow(BaseModel):
+    """Maps to internal_marks_events table."""
     subject_code:    str
-    subject_name:    str
-    semester:        str
-    exam_number:     str | int
+    raw_subject_name: str | None = None
+    semester_id:     str | None = None          # UUID or None
+    exam_number:     str                         # stored as text
     exam_type:       str = "series_exam"
     max_marks:       float
-    marks_obtained:  float | None
-    scraped_at:      str | None
+    marks_obtained:  float | None = None
+    scraped_at:      str | None = None
 
 
 class InternalMarksResponse(BaseModel):
@@ -147,12 +85,13 @@ class InternalMarksResponse(BaseModel):
 # ── Attendance ────────────────────────────────────────────────────────
 
 class AttendanceRow(BaseModel):
+    """Maps to attendance_summary table."""
     subject_code:     str
-    subject_name:     str | None
+    semester_id:      str | None = None          # UUID or None
     classes_attended: int
     classes_total:    int
     percentage:       float
-    scraped_at:       str | None
+    scraped_at:       str | None = None
 
 
 class AttendanceResponse(BaseModel):
@@ -163,13 +102,15 @@ class AttendanceResponse(BaseModel):
 # ── Timetable ────────────────────────────────────────────────────────
 
 class TimetableSlot(BaseModel):
-    day:          str
-    period:       int
-    period_time:  str
-    subject_code: str | None
-    subject_name: str | None
-    class_type:   str | None
-    teacher:      str | None
+    """Maps to timetable_slots table."""
+    day_of_week:     str
+    period_number:   int
+    period_time:     str | None = None
+    subject_code:    str | None = None
+    raw_subject_name: str | None = None
+    class_type:      str | None = None
+    teacher_name_raw: str | None = None
+    semester_id:     str | None = None
 
 
 class TimetableResponse(BaseModel):
@@ -180,22 +121,22 @@ class TimetableResponse(BaseModel):
 # ── University Results ────────────────────────────────────────────────
 
 class UniversityResultRow(BaseModel):
-    exam_id:        str
-    exam_name:      str | None
-    semester_label: str | None
-    academic_year:  str | None
-    exam_month:     str | None
-    exam_year:      str | None
-    slot:           str | None
-    subject_code:   str
-    subject_name:   str | None
-    grade:          str | None
-    credit:         float | None
-    result_status:  str | None
-    sgpa:           float | None
-    cgpa:           float | None
-    earned_credit:  float | None
-    scraped_at:     str | None
+    """Maps to university_exam_results joined with exam_sessions."""
+    exam_session_id: str | None = None
+    exam_id:         str | None = None          # from exam_sessions join
+    exam_name:       str | None = None
+    exam_month:      str | None = None          # already cleaned (e.g. "May")
+    exam_year:       int | None = None
+    slot:            str | None = None
+    subject_code:    str
+    raw_subject_name: str | None = None
+    grade:           str | None = None
+    result_status:   str | None = None
+    credit:          float | None = None
+    sgpa:            float | None = None
+    cgpa:            float | None = None
+    earned_credit:   float | None = None
+    scraped_at:      str | None = None
 
 
 class UniversityResultsResponse(BaseModel):
@@ -219,9 +160,9 @@ class SyncSummary(BaseModel):
 
 class SubjectRow(BaseModel):
     subject_code: str
-    subject_name: str | None
-    credit:       float | None
-    last_seen_at: str | None
+    subject_name: str | None = None
+    credit:       float | None = None
+    last_seen_at: str | None = None
 
 
 class SubjectsResponse(BaseModel):
@@ -232,15 +173,15 @@ class SubjectsResponse(BaseModel):
 
 class StudentSummary(BaseModel):
     roll_number:          str
-    admission_number:     str | None
-    full_name:            str | None
-    department:           str | None
-    programme:            str | None
-    semester:             str | None
-    email:                str | None
-    phone:                str | None
-    latest_cgpa:          float | None
-    latest_sgpa:          float | None
-    avg_attendance_pct:   float | None
-    subjects_below_75:    int | None
-    profile_last_updated: str | None
+    admission_number:     str | None = None
+    full_name:            str | None = None
+    department:           str | None = None
+    programme:            str | None = None
+    semester:             str | None = None
+    email:                str | None = None
+    phone:                str | None = None
+    latest_cgpa:          float | None = None
+    latest_sgpa:          float | None = None
+    avg_attendance_pct:   float | None = None
+    subjects_below_75:    int | None = None
+    profile_last_updated: str | None = None

@@ -29,6 +29,7 @@ from app.db import timetable as tt_db
 from app.db import profile as profile_db
 from app.db import university_results as uni_db
 from app.db import sync_meta
+from app.db import reference_tables as ref_db
 
 cfg = get_settings()
 log = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ def sync_all(
     2. Scrape profile → determine roll_number + etlab_user_id
     3. Upsert student row
     4. Sync each category respecting refresh intervals
+    5. Populate all reference tables (departments, programmes, semesters, teachers)
 
     Returns a SyncSummary-compatible dict.
     """
@@ -83,6 +85,14 @@ def sync_all(
         "skipped":                    [],
     }
 
+    # Track raw rows for reference-table population at the end
+    _scraped: dict[str, list] = {
+        "marks_rows":   [],
+        "att_rows":     [],
+        "tt_rows":      [],
+        "uni_rows":     [],
+    }
+
     # ── Profile sync ───────────────────────────────────────────────────
     if force or sync_meta.needs_refresh(client, student_id, "profile", cfg.PROFILE_MAX_AGE_SECONDS):
         profile_db.upsert_profile(client, student_id, profile_data)
@@ -94,6 +104,7 @@ def sync_all(
     # ── Internal Marks ─────────────────────────────────────────────────
     if force or sync_meta.needs_refresh(client, student_id, "marks", cfg.MARKS_MAX_AGE_SECONDS):
         rows = marks_scraper.scrape_marks(etlab)
+        _scraped["marks_rows"] = rows
         n = marks_db.upsert_marks(client, student_id, rows)
         summary["marks_written"] = n
         sync_meta.mark_synced(client, student_id, "marks", rows_written=n)
@@ -107,6 +118,7 @@ def sync_all(
             summary["skipped"].append("attendance (etlab_user_id missing)")
         else:
             rows = att_scraper.scrape_attendance(etlab, etlab_user_id)
+            _scraped["att_rows"] = rows
             n = att_db.upsert_attendance(client, student_id, rows)
             summary["attendance_written"] = n
             sync_meta.mark_synced(client, student_id, "attendance", rows_written=n)
@@ -116,6 +128,7 @@ def sync_all(
     # ── Timetable ──────────────────────────────────────────────────────
     if force or sync_meta.needs_refresh(client, student_id, "timetable", cfg.TIMETABLE_MAX_AGE_SECONDS):
         rows = tt_scraper.scrape_timetable(etlab)
+        _scraped["tt_rows"] = rows
         n = tt_db.replace_timetable(client, student_id, rows)
         summary["timetable_written"] = n
         sync_meta.mark_synced(client, student_id, "timetable", rows_written=n)
@@ -125,11 +138,29 @@ def sync_all(
     # ── University Results ─────────────────────────────────────────────
     if force or sync_meta.needs_refresh(client, student_id, "university_results", cfg.UNI_RESULTS_MAX_AGE_SECONDS):
         rows = uni_scraper.scrape_university_results(etlab)
+        _scraped["uni_rows"] = rows
         n = uni_db.upsert_university_results(client, student_id, rows)
         summary["university_results_written"] = n
         sync_meta.mark_synced(client, student_id, "university_results", rows_written=n)
     else:
         summary["skipped"].append("university_results")
+
+    # ── Reference tables (departments, programmes, semesters, teachers) ─
+    # Always run — fast upserts, uses already-scraped data.
+    try:
+        ref_stats = ref_db.populate_reference_tables(
+            client,
+            student_id            = student_id,
+            profile_data          = profile_data,
+            timetable_rows        = _scraped["tt_rows"],
+            university_result_rows= _scraped["uni_rows"],
+            attendance_rows       = _scraped["att_rows"],
+            marks_rows            = _scraped["marks_rows"],
+        )
+        summary["reference_tables"] = ref_stats
+        log.info("Reference tables populated: %s", ref_stats)
+    except Exception as exc:
+        log.warning("Reference table population failed (non-fatal): %s", exc)
 
     log.info("Sync complete for %s: %s", roll_number, summary)
     return summary

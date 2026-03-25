@@ -40,6 +40,26 @@ def _safe_float(val: str) -> float | None:
         return None
 
 
+def _clean_prefix(raw: str, prefix_key: str) -> str:
+    """
+    Strip common label prefixes from scraped metadata values.
+    Examples:
+      _clean_prefix("Month: May", "month")  → "May"
+      _clean_prefix("Year: 2024", "year")   → "2024"
+      _clean_prefix("Academic Year: 2023-24", "academic year") → "2023-24"
+    Falls back to returning the raw value stripped of leading/trailing whitespace.
+    """
+    import re as _re
+    # Match e.g. "Month:", "Year:", "Academic Year:", "Slot:" at start of string
+    cleaned = _re.sub(
+        rf"^\s*{_re.escape(prefix_key)}\s*[:\-]\s*",
+        "",
+        raw,
+        flags=_re.IGNORECASE,
+    ).strip()
+    return cleaned or raw.strip()
+
+
 def _scrape_detail(
     session: requests.Session,
     exam_id: str,
@@ -75,9 +95,9 @@ def _scrape_detail(
         text = tr.get_text(strip=True)
         if text:
             meta1_rows.append(text)
-    academic_year = meta1_rows[0] if meta1_rows else ""
-    exam_month    = meta1_rows[1] if len(meta1_rows) > 1 else ""
-    exam_year     = meta1_rows[2] if len(meta1_rows) > 2 else ""
+    academic_year = _clean_prefix(meta1_rows[0] if meta1_rows else "", "academic year")
+    exam_month    = _clean_prefix(meta1_rows[1] if len(meta1_rows) > 1 else "", "month")
+    exam_year     = _clean_prefix(meta1_rows[2] if len(meta1_rows) > 2 else "", "year")
 
     # â”€â”€ Table #2: results (thead + tbody + tfoot) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     results_table = tables[2]
