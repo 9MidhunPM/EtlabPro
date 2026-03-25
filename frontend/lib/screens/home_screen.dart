@@ -761,7 +761,7 @@ class _ProfileInfoCard extends StatelessWidget {
       child: Column(
         children: [
           _row(Icons.badge_rounded, 'Name', summary!['full_name'], scheme),
-          _row(Icons.school_rounded, 'Semester', summary!['semester'], scheme),
+          _row(Icons.school_rounded, 'Semester', (summary!['semester'] as String?)?.replaceAll(RegExp(r'semester\s*', caseSensitive: false), 'S'), scheme),
           _row(Icons.numbers_rounded, 'SHR Number', summary!['roll_number'], scheme),
           _row(Icons.account_balance_rounded, 'Department', summary!['department'], scheme),
         ],

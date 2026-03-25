@@ -44,6 +44,7 @@ class AppConstants {
   static const String kLocalMarks      = 'local_marks';
   static const String kLocalUniResults = 'local_uni_results';
   static const String kLocalTimetable  = 'local_timetable';
+  static const String kLocalShrNumber  = 'local_shr_number';
 
   // Cache TTL keys (stored as ISO-8601 timestamps in secure storage)
   static const String kAttendanceTs  = 'cache_attendance_ts';

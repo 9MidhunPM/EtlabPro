@@ -99,7 +99,7 @@ class _TimetableScreenState extends State<TimetableScreen> with SingleTickerProv
                   onRefresh: _refreshTimetableWithFeedback,
                 ),
                 // Analysis tab
-                _AnalysisTab(slots: allSlots, attendance: data.attendance),
+                _AnalysisTab(slots: allSlots, attendance: data.attendance, marks: data.marks),
               ],
             ),
           ),
@@ -249,7 +249,8 @@ class _SlotCard extends StatelessWidget {
 class _AnalysisTab extends StatelessWidget {
   final List<dynamic> slots;
   final List<dynamic> attendance;
-  const _AnalysisTab({required this.slots, required this.attendance});
+  final List<dynamic>? marks;
+  const _AnalysisTab({required this.slots, required this.attendance, this.marks});
 
   @override
   Widget build(BuildContext context) {
@@ -258,7 +259,7 @@ class _AnalysisTab extends StatelessWidget {
       return Center(child: Text('No timetable data', style: TextStyle(color: scheme.onSurfaceVariant)));
     }
 
-    final summary = getTimetableSummary(slots, attendance);
+    final summary = getTimetableSummary(slots, attendance, marks);
     final subjects = summary.weeklyClassesPerSubject.keys.toList();
 
     return ListView(

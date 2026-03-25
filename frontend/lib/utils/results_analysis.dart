@@ -65,12 +65,21 @@ List<SubjectAnalysis> getResultsAnalysis(
   List<dynamic> marks,
   List<dynamic> attendance,
 ) {
-  // Group marks by subject, pick latest exam per subject
+  // Group marks by subject, prioritize CAT 1 / Series 1
   final subjectMap = <String, Map<String, dynamic>>{};
   for (final m in marks) {
     final code = m['subject_code'] as String? ?? '';
     if (code.isEmpty || code == '24PWT208') continue;
-    subjectMap[code] = m;
+    
+    final type = (m['exam_type'] ?? '').toString().toLowerCase();
+    final numStr = (m['exam_number'] ?? '').toString();
+    final isCat1 = (type.contains('series') || type.contains('cat')) && numStr == '1';
+
+    if (!subjectMap.containsKey(code)) {
+      subjectMap[code] = m;
+    } else if (isCat1) {
+      subjectMap[code] = m;
+    }
   }
 
   // Build attendance lookup: subject_code → percentage

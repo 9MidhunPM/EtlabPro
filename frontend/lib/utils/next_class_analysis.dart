@@ -81,8 +81,8 @@ NextClassResult getNextClassInfo(List<dynamic> timetableSlots) {
   // Build period list for today
   final todaySlots = <int, Map<String, dynamic>>{};
   for (final s in timetableSlots) {
-    if ((s['day'] as String?)?.toLowerCase() == currentDay) {
-      todaySlots[s['period'] as int? ?? 0] = s as Map<String, dynamic>;
+    if ((s['day_of_week'] as String?)?.toLowerCase() == currentDay) {
+      todaySlots[s['period_number'] as int? ?? 0] = s as Map<String, dynamic>;
     }
   }
 
@@ -129,8 +129,8 @@ ClassInfo? _getTomorrowFirstClass(List<dynamic> slots, String currentDay) {
 
   final tomorrowSlots = <int, Map<String, dynamic>>{};
   for (final s in slots) {
-    if ((s['day'] as String?)?.toLowerCase() == nextDayName) {
-      tomorrowSlots[s['period'] as int? ?? 0] = s as Map<String, dynamic>;
+    if ((s['day_of_week'] as String?)?.toLowerCase() == nextDayName) {
+      tomorrowSlots[s['period_number'] as int? ?? 0] = s as Map<String, dynamic>;
     }
   }
 

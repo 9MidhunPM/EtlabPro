@@ -210,7 +210,8 @@ class _SemesterPage extends StatelessWidget {
             children: rows.asMap().entries.map((entry) {
               final r = entry.value;
               final grade = r['grade'] ?? '—';
-              final status = (r['result_status'] ?? '').toString();
+              final rawStatus = (r['result_status'] ?? '').toString();
+              final status = rawStatus.toLowerCase() == 'pending' ? '' : rawStatus;
               final credit = r['credit'];
               final slot = r['slot'] ?? '';
               final gc = gradeColor(grade);

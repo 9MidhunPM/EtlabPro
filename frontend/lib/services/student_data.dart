@@ -16,6 +16,7 @@ class StudentData extends ChangeNotifier {
   List<dynamic> marks             = [];
   List<dynamic> universityResults = [];
   List<dynamic> timetable         = [];
+  String? shrNumber;
 
   bool isLoading = false;
   String? error;
@@ -50,6 +51,8 @@ class StudentData extends ChangeNotifier {
     if (u != null) universityResults = jsonDecode(u) as List;
     final t = prefs.getString(AppConstants.kLocalTimetable);
     if (t != null) timetable = jsonDecode(t) as List;
+    final shr = prefs.getString(AppConstants.kLocalShrNumber);
+    if (shr != null) shrNumber = shr;
     // Restore cached timestamps
     final att = await _secureStorage.read(key: AppConstants.kAttendanceTs);
     if (att != null) _attendanceSynced = DateTime.tryParse(att);
@@ -72,6 +75,7 @@ class StudentData extends ChangeNotifier {
     if (marks.isNotEmpty) await prefs.setString(AppConstants.kLocalMarks, jsonEncode(marks));
     if (universityResults.isNotEmpty) await prefs.setString(AppConstants.kLocalUniResults, jsonEncode(universityResults));
     if (timetable.isNotEmpty) await prefs.setString(AppConstants.kLocalTimetable, jsonEncode(timetable));
+    if (shrNumber != null) await prefs.setString(AppConstants.kLocalShrNumber, shrNumber!);
   }
 
   // ── Smart load: only fetch stale data from DB ──────────────────────
@@ -159,6 +163,7 @@ class StudentData extends ChangeNotifier {
     await _trackSectionLoad('Timetable', () async {
       final r = await ApiClient.instance.get('/timetable/$roll');
       timetable = (r as Map)['slots'] as List;
+      shrNumber = (r['student_details'] as Map?)?['roll_no'] as String?;
       await _stamp(AppConstants.kTimetableTs);
     });
   }
@@ -226,7 +231,7 @@ class StudentData extends ChangeNotifier {
   }
 
   Future<void> clear() async {
-    profile = summary = null;
+    profile = summary = shrNumber = null;
     attendance = marks = universityResults = timetable = [];
     error = null;
     final prefs = await SharedPreferences.getInstance();
@@ -234,6 +239,7 @@ class StudentData extends ChangeNotifier {
       AppConstants.kLocalProfile, AppConstants.kLocalSummary,
       AppConstants.kLocalAttendance, AppConstants.kLocalMarks,
       AppConstants.kLocalUniResults, AppConstants.kLocalTimetable,
+      AppConstants.kLocalShrNumber,
     ]) {
       await prefs.remove(k);
     }

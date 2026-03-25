@@ -6,7 +6,6 @@ import 'core/router.dart';
 import 'core/theme.dart';
 import 'services/auth_service.dart';
 import 'services/connectivity_service.dart';
-import 'services/lock_service.dart';
 import 'services/student_data.dart';
 import 'services/theme_notifier.dart';
 
@@ -42,7 +41,6 @@ class EtlabProApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: studentData),
         ChangeNotifierProvider(create: (_) => ThemeNotifier(themeMode)),
         ChangeNotifierProvider(create: (_) => ConnectivityService()),
-        ChangeNotifierProvider(create: (_) => LockService()),
       ],
       builder: (context, _) {
         final router = buildRouter(context.read<AuthService>());
@@ -55,9 +53,6 @@ class EtlabProApp extends StatelessWidget {
           routerConfig: router,
           debugShowCheckedModeBanner: false,
           builder: (context, child) {
-            final lock      = context.watch<LockService>();
-            final authState = context.watch<AuthService>();
-            if (lock.isLocked && authState.isLoggedIn) return _LockScreen();
             return child ?? const SizedBox();
           },
         );
@@ -66,42 +61,4 @@ class EtlabProApp extends StatelessWidget {
   }
 }
 
-class _LockScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 80, height: 80,
-                decoration: BoxDecoration(
-                  color: scheme.primary.withAlpha(20),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Icon(Icons.lock_rounded, size: 40, color: scheme.primary),
-              ),
-              const SizedBox(height: 24),
-              Text('EtlabPro is locked',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: scheme.onSurface)),
-              const SizedBox(height: 8),
-              Text('Authenticate to continue',
-                  style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant)),
-              const SizedBox(height: 32),
-              FilledButton.icon(
-                icon: const Icon(Icons.fingerprint_rounded),
-                label: const Text('Unlock'),
-                onPressed: () => context.read<LockService>().authenticate(),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+

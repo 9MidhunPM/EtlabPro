@@ -57,8 +57,6 @@ dependencies:
   # Connectivity detection
   connectivity_plus: ^6.0.0
 
-  # Biometric / device lock
-  local_auth: ^2.3.0
 
 dev_dependencies:
   flutter_test:

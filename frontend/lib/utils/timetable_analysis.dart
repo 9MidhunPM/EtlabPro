@@ -12,10 +12,19 @@ Map<String, int> getSubjectClassesPerWeek(List<dynamic> slots) {
 }
 
 /// Get total class hours per subject from attendance data.
-Map<String, int> getSubjectTotalHoursFromAttendance(List<dynamic> attendance) {
+Map<String, int> getSubjectTotalHoursFromAttendance(List<dynamic> attendance, [List<dynamic>? marks]) {
   final hours = <String, int>{};
+  final subjectNames = <String, String>{};
+  if (marks != null) {
+    for (final m in marks) {
+      if (m['subject_code'] != null && m['raw_subject_name'] != null) {
+        subjectNames[m['subject_code']] = m['raw_subject_name'];
+      }
+    }
+  }
   for (final a in attendance) {
-    final name = (a['raw_subject_name'] ?? a['subject_code'] ?? '') as String;
+    final code = (a['subject_code'] ?? '') as String;
+    final name = (a['raw_subject_name'] ?? subjectNames[code] ?? code) as String;
     final total = a['classes_total'] as int? ?? 0;
     if (name.isNotEmpty) hours[name] = total;
   }
@@ -42,9 +51,10 @@ class TimetableSummary {
 TimetableSummary getTimetableSummary(
   List<dynamic> slots,
   List<dynamic> attendance,
+  [List<dynamic>? marks]
 ) {
   final weekly = getSubjectClassesPerWeek(slots);
-  final hours = getSubjectTotalHoursFromAttendance(attendance);
+  final hours = getSubjectTotalHoursFromAttendance(attendance, marks);
   final totalWeekly = weekly.values.fold<int>(0, (s, v) => s + v);
   final totalHrs = hours.values.fold<int>(0, (s, v) => s + v);
 

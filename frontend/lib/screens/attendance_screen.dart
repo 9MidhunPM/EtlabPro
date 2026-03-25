@@ -35,7 +35,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
     final data = context.read<StudentData>();
     if (data.attendance.isEmpty || data.timetable.isEmpty) return;
     setState(() {
-      _analysis = getComprehensiveAnalysis(data.attendance, data.timetable, _targetDate);
+      _analysis = getComprehensiveAnalysis(data.attendance, data.timetable, _targetDate, data.marks);
     });
   }
 
@@ -477,7 +477,15 @@ class _SubjectTile extends StatelessWidget {
       : pct >= 90
             ? Colors.green.shade700
             : scheme.primary;
-    final name = row['raw_subject_name'] ?? row['subject_code'] ?? '—';
+    final stdData = context.read<StudentData>();
+    String? lookupName;
+    for (final m in stdData.marks) {
+      if (m['subject_code'] == row['subject_code']) {
+        lookupName = m['raw_subject_name'];
+        break;
+      }
+    }
+    final name = row['raw_subject_name'] ?? lookupName ?? row['subject_code'] ?? '—';
     final attended = (row['classes_attended'] as num?)?.toInt();
     final total = (row['classes_total'] as num?)?.toInt();
     final requiredToRecover = _classesNeededToReach75(attended, total);
@@ -707,7 +715,7 @@ class _ProjectionTable extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(p.code, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text('${p.name} (${p.code})', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
                 Text('${p.currentPresent}/${p.currentTotal} (${p.currentPercentage.toStringAsFixed(0)}%)',
                     style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant)),
               ],

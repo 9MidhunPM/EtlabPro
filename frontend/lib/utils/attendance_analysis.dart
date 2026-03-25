@@ -106,8 +106,17 @@ AttendanceAnalysis getComprehensiveAnalysis(
   List<dynamic> attendance,
   List<dynamic> timetableSlots,
   DateTime targetDate,
+  [List<dynamic>? marks] // added marks to extract names
 ) {
   final weeklyClasses = getSubjectClassesPerWeek(timetableSlots);
+  final subjectNames = <String, String>{};
+  if (marks != null) {
+    for (final m in marks) {
+      if (m['subject_code'] != null && m['raw_subject_name'] != null) {
+        subjectNames[m['subject_code']] = m['raw_subject_name'];
+      }
+    }
+  }
 
   final perfect = <SubjectProjection>[];
   final s75 = <SubjectSkippable>[];
@@ -115,7 +124,7 @@ AttendanceAnalysis getComprehensiveAnalysis(
 
   for (final a in attendance) {
     final code = (a['subject_code'] ?? '') as String;
-    final name = (a['raw_subject_name'] ?? code) as String;
+    final name = (a['raw_subject_name'] ?? subjectNames[code] ?? code) as String;
     final present = (a['classes_attended'] as num?)?.toInt() ?? 0;
     final total = (a['classes_total'] as num?)?.toInt() ?? 0;
     final pct = (a['percentage'] as num?)?.toDouble() ?? 0;
