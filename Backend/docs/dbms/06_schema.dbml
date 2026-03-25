@@ -1,0 +1,341 @@
+Project EtlabProDBMS {
+  database_type: "PostgreSQL"
+  Note: "Canonical v3 normalized model (Supabase-compatible)"
+}
+
+Enum exam_type_enum {
+  series_exam
+  module_test
+  class_project
+  assignment
+  tutorial
+}
+
+Enum result_status_enum {
+  pass
+  fail
+  pending
+  absent
+  withheld
+}
+
+Enum day_of_week_enum {
+  Mon
+  Tue
+  Wed
+  Thu
+  Fri
+  Sat
+  Sun
+}
+
+Enum class_type_enum {
+  Lecture
+  Tutorial
+  Lab
+  Practical
+  Seminar
+  Workshop
+}
+
+Enum sync_category_enum {
+  profile
+  marks
+  attendance
+  timetable
+  university_results
+}
+
+Table students {
+  id uuid [pk]
+  roll_number text [not null, unique]
+  admission_number text
+  etlab_user_id text
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table departments {
+  id uuid [pk]
+  code text [not null, unique]
+  name text [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table programmes {
+  id uuid [pk]
+  department_id uuid
+  code text [not null, unique]
+  name text [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table academic_years {
+  id uuid [pk]
+  label text [not null, unique]
+  start_year int
+  end_year int
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table semesters {
+  id uuid [pk]
+  programme_id uuid
+  academic_year_id uuid
+  semester_number int
+  semester_label text [not null]
+  is_current boolean [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (programme_id, academic_year_id, semester_label) [unique]
+  }
+}
+
+Table subjects {
+  subject_code text [pk]
+  subject_name text [not null]
+  credit numeric
+  department_id uuid
+  programme_id uuid
+  last_seen_at timestamptz [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table teachers {
+  id uuid [pk]
+  employee_id text [unique]
+  full_name text [not null]
+  email text
+  phone text
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table student_profile {
+  id uuid [pk]
+  student_id uuid [not null, unique]
+  full_name text
+  gender text
+  date_of_birth date
+  blood_group text
+  nationality text
+  religion text
+  community text
+  caste text
+  mother_tongue text
+  department_id uuid
+  programme_id uuid
+  current_semester_id uuid
+  email text
+  phone text
+  address text
+  district text
+  state text
+  pin_code text
+  extra_fields jsonb
+  scraped_at timestamptz [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table student_guardians {
+  id uuid [pk]
+  student_id uuid [not null]
+  relation_type text [not null]
+  guardian_name text
+  guardian_phone text
+  occupation text
+  education text
+  annual_income numeric
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (student_id, relation_type) [unique]
+  }
+}
+
+Table bank_accounts {
+  id uuid [pk]
+  student_id uuid [not null, unique]
+  bank_name text
+  account_number text
+  ifsc_code text
+  fee_concession text
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table exam_sessions {
+  id uuid [pk]
+  exam_id text [not null, unique]
+  exam_name text
+  semester_id uuid
+  academic_year_id uuid
+  exam_month text
+  exam_year int
+  slot text
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table internal_marks_events {
+  id uuid [pk]
+  student_id uuid [not null]
+  semester_id uuid
+  subject_code text [not null]
+  raw_subject_name text
+  exam_number text [not null]
+  exam_type exam_type_enum [not null, default: 'series_exam']
+  max_marks numeric [not null]
+  marks_obtained numeric
+  scraped_at timestamptz [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (student_id, subject_code, semester_id, exam_number, exam_type) [unique]
+  }
+}
+
+Table attendance_summary {
+  id uuid [pk]
+  student_id uuid [not null]
+  semester_id uuid
+  subject_code text [not null]
+  classes_attended int [not null]
+  classes_total int [not null]
+  percentage numeric [not null]
+  scraped_at timestamptz [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (student_id, semester_id, subject_code) [unique]
+  }
+}
+
+Table timetable_slots {
+  id uuid [pk]
+  student_id uuid [not null]
+  semester_id uuid
+  day_of_week day_of_week_enum [not null]
+  period_number int [not null]
+  period_time text
+  subject_code text
+  raw_subject_name text
+  class_type class_type_enum
+  teacher_id uuid
+  teacher_name_raw text
+  scraped_at timestamptz [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (student_id, semester_id, day_of_week, period_number) [unique]
+  }
+}
+
+Table university_exam_results {
+  id uuid [pk]
+  student_id uuid [not null]
+  exam_session_id uuid [not null]
+  subject_code text [not null]
+  raw_subject_name text
+  grade text
+  result_status result_status_enum
+  credit numeric
+  sgpa numeric
+  cgpa numeric
+  earned_credit numeric
+  scraped_at timestamptz [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+
+  indexes {
+    (student_id, exam_session_id, subject_code) [unique]
+  }
+}
+
+Table sync_runs {
+  id uuid [pk]
+  student_id uuid [not null]
+  category sync_category_enum [not null]
+  status text [not null, default: 'running']
+  started_at timestamptz [not null]
+  finished_at timestamptz
+  rows_written int [not null]
+  error_msg text
+  metadata jsonb
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table sync_meta {
+  id uuid [pk]
+  student_id uuid [not null]
+  category sync_category_enum [not null]
+  last_synced timestamptz [not null]
+  rows_written int [not null]
+  status text [not null]
+  error_msg text
+  updated_at timestamptz [not null]
+
+  indexes {
+    (student_id, category) [unique]
+  }
+}
+
+Table audit_log {
+  id bigserial [pk]
+  table_name text [not null]
+  operation text [not null]
+  record_pk text
+  old_values jsonb
+  new_values jsonb
+  changed_at timestamptz [not null]
+  changed_by text
+}
+
+Ref: programmes.department_id > departments.id
+Ref: subjects.department_id > departments.id
+Ref: subjects.programme_id > programmes.id
+Ref: semesters.programme_id > programmes.id
+Ref: semesters.academic_year_id > academic_years.id
+
+Ref: student_profile.student_id > students.id
+Ref: student_profile.department_id > departments.id
+Ref: student_profile.programme_id > programmes.id
+Ref: student_profile.current_semester_id > semesters.id
+
+Ref: student_guardians.student_id > students.id
+Ref: bank_accounts.student_id > students.id
+
+Ref: exam_sessions.semester_id > semesters.id
+Ref: exam_sessions.academic_year_id > academic_years.id
+
+Ref: internal_marks_events.student_id > students.id
+Ref: internal_marks_events.semester_id > semesters.id
+Ref: internal_marks_events.subject_code > subjects.subject_code
+
+Ref: attendance_summary.student_id > students.id
+Ref: attendance_summary.semester_id > semesters.id
+Ref: attendance_summary.subject_code > subjects.subject_code
+
+Ref: timetable_slots.student_id > students.id
+Ref: timetable_slots.semester_id > semesters.id
+Ref: timetable_slots.subject_code > subjects.subject_code
+Ref: timetable_slots.teacher_id > teachers.id
+
+Ref: university_exam_results.student_id > students.id
+Ref: university_exam_results.exam_session_id > exam_sessions.id
+Ref: university_exam_results.subject_code > subjects.subject_code
+
+Ref: sync_runs.student_id > students.id
+Ref: sync_meta.student_id > students.id
