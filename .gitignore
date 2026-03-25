@@ -64,13 +64,14 @@ secrets.dart
 google-services.json
 GoogleService-Info.plist
 
-# ── Old React Native frontend ─────────────────────────────────────────
-frontend OLD IN REACT/
-
-# ── Node (inside React project) ───────────────────────────────────────
+# ── Other / General ───────────────────────────────────────────────────
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.expo/
-.expo-shared/
+.git/
+out/
+.cache/
+*.log
+*.exe
+*.dll
+
+# ── Old React Native frontend ─────────────────────────────────────────
+frontend OLD IN REACT/
