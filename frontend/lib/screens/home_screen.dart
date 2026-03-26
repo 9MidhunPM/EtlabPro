@@ -304,6 +304,9 @@ class _NextClassCard extends StatelessWidget {
     if (info.isClassOngoing && info.currentClass != null) {
       return _buildClassPane(scheme, info.currentClass!, isOngoing: true);
     }
+    if (!info.isClassOngoing && info.nextClass != null) {
+      return _buildClassPane(scheme, info.nextClass!, isOngoing: false);
+    }
     // No classes left today
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -337,34 +340,60 @@ class _NextClassCard extends StatelessWidget {
       if (info.nextClass != null) {
         // Ongoing + next class
         return _buildClassPane(scheme, info.nextClass!, isOngoing: false);
-      } else {
-        // Last class of day
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 52, height: 52,
-                decoration: BoxDecoration(
-                  color: Colors.green.shade100.withAlpha(150),
-                  borderRadius: BorderRadius.circular(26),
-                ),
-                alignment: Alignment.center,
-                child: Icon(Icons.check_circle_rounded, size: 26, color: Colors.green.shade600),
-              ),
-              const SizedBox(height: 12),
-              Text("You're done for today!",
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 4),
-              Text('Last class in session',
-                  style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
-                  textAlign: TextAlign.center),
-            ],
-          ),
-        );
       }
+      // Last class of day
+      return Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 52, height: 52,
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer.withAlpha(80),
+                borderRadius: BorderRadius.circular(26),
+              ),
+              alignment: Alignment.center,
+              child: Icon(Icons.nights_stay_rounded, size: 26, color: scheme.primary),
+            ),
+            const SizedBox(height: 12),
+            Text('No more classes today',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: scheme.onSurface),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 4),
+            Text('See you tomorrow!',
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                textAlign: TextAlign.center),
+          ],
+        ),
+      );
+    } else if (info.nextClass != null) {
+      // Morning / Before classes start
+      return Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 52, height: 52,
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer.withAlpha(80),
+                borderRadius: BorderRadius.circular(26),
+              ),
+              alignment: Alignment.center,
+              child: Icon(Icons.wb_sunny_rounded, size: 26, color: scheme.primary),
+            ),
+            const SizedBox(height: 12),
+            Text('Good morning!',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: scheme.onSurface),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 4),
+            Text('Classes start soon',
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+                textAlign: TextAlign.center),
+          ],
+        ),
+      );
     }
     // Day done — show tomorrow's first class
     if (info.tomorrowFirstClass != null) {
@@ -432,7 +461,7 @@ class _NextClassCard extends StatelessWidget {
   Widget _buildClassPane(ColorScheme scheme, ClassInfo c, {required bool isOngoing}) {
     final isFree = c.isFree || c.subject.toLowerCase().contains('free');
     final badge = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: isOngoing ? Colors.green.shade600 : scheme.secondaryContainer,
         borderRadius: BorderRadius.circular(8),
@@ -440,83 +469,62 @@ class _NextClassCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isOngoing) ...[Container(width: 5, height: 5,
+          if (isOngoing) ...[Container(width: 6, height: 6,
               decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
-            const SizedBox(width: 3),
-            const Text('LIVE', style: TextStyle(fontSize: 9, color: Colors.white,
-                fontWeight: FontWeight.w700, letterSpacing: 0.5))],
+            const SizedBox(width: 4),
+            const Text('LIVE', style: TextStyle(fontSize: 10, color: Colors.white,
+                fontWeight: FontWeight.w800, letterSpacing: 0.5))],
           if (!isOngoing) Text('NEXT',
-              style: TextStyle(fontSize: 9, color: scheme.onSecondaryContainer,
-                  fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+              style: TextStyle(fontSize: 10, color: scheme.onSecondaryContainer,
+                  fontWeight: FontWeight.w800, letterSpacing: 0.5)),
         ],
       ),
     );
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Timing
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: scheme.primaryContainer.withAlpha(80),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.access_time_rounded, size: 11, color: scheme.onPrimaryContainer),
+                Icon(Icons.access_time_rounded, size: 12, color: scheme.onPrimaryContainer),
                 const SizedBox(width: 4),
                 Text(c.timing, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: scheme.onPrimaryContainer)),
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          // Book icon
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              color: isFree ? scheme.onSurfaceVariant.withAlpha(25) : scheme.primary.withAlpha(22),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.center,
-            child: Icon(Icons.menu_book_rounded, size: 22,
-                color: isFree ? scheme.onSurfaceVariant : scheme.primary),
-          ),
-          const SizedBox(height: 8),
-          // Subject + inline badge
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!isOngoing) ...[badge, const SizedBox(width: 6)],
-              Flexible(
-                child: Text(isFree ? 'Free Period' : c.subject,
-                    style: TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w700,
-                        color: isFree ? scheme.onSurfaceVariant : scheme.onSurface,
-                        fontStyle: isFree ? FontStyle.italic : FontStyle.normal),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis),
-              ),
-              if (isOngoing) ...[const SizedBox(width: 6), badge],
-            ],
-          ),
-          // Teacher
-          if (!isFree && c.teacher != null) ...[const SizedBox(height: 4),
+          const SizedBox(height: 16),
+          Text(isFree ? 'Free Period' : c.subject,
+              style: TextStyle(
+                  fontSize: 12.5, fontWeight: FontWeight.w700, height: 1.3,
+                  color: isFree ? scheme.onSurfaceVariant : scheme.onSurface,
+                  fontStyle: isFree ? FontStyle.italic : FontStyle.normal),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis),
+          if (!isFree && c.teacher != null) ...[
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.person_rounded, size: 12, color: scheme.onSurfaceVariant),
-                const SizedBox(width: 3),
+                const SizedBox(width: 4),
                 Flexible(child: Text(c.teacher!, style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
                     textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis)),
               ],
-            )],
+            )
+          ],
+          const SizedBox(height: 16),
+          badge,
         ],
       ),
     );
