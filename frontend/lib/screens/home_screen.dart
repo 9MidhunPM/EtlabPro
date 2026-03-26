@@ -769,12 +769,23 @@ class _ProfileInfoCard extends StatelessWidget {
       child: Column(
         children: [
           _row(Icons.badge_rounded, 'Name', summary!['full_name'], scheme),
-          _row(Icons.school_rounded, 'Semester', (summary!['semester'] as String?)?.replaceAll(RegExp(r'semester\s*', caseSensitive: false), 'S'), scheme),
+          _row(Icons.school_rounded, 'Semester', _formatSemester(summary!['semester'] as String?), scheme),
           _row(Icons.numbers_rounded, 'SHR Number', summary!['roll_number'], scheme),
           _row(Icons.account_balance_rounded, 'Department', summary!['department'], scheme),
         ],
       ),
     );
+  }
+
+  String _formatSemester(String? semStr) {
+    if (semStr == null || semStr.isEmpty) return '—';
+    final match = RegExp(r'\d+').firstMatch(semStr);
+    if (match != null) {
+      int semNum = int.parse(match.group(0)!);
+      semNum = (semNum + 1).clamp(1, 8);
+      return 'S$semNum';
+    }
+    return semStr.replaceAll(RegExp(r'semester\s*', caseSensitive: false), 'S');
   }
 
   Widget _row(IconData icon, String label, dynamic value, ColorScheme scheme) {
