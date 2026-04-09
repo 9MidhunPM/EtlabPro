@@ -1,0 +1,18 @@
+.git
+.gitignore
+.vscode
+
+# Never send secrets into build context
+**/.env
+**/*.env
+
+# Keep image context backend-only for Dokploy
+frontend
+Backend/docs
+Backend/scrape_output.txt
+
+# Python/cache artifacts
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
