@@ -249,35 +249,15 @@ class StudentData extends ChangeNotifier {
   Future<Map<String, dynamic>> fetchLiveMonthlyAttendance({
     required String username,
     required String password,
-    String? semester,
-    String? month,
-    String? year,
   }) async {
     try {
-      final result = await ApiClient.instance.post('/live/monthly-attendance', {
+      final result = await ApiClient.instance.post('/live/monthly-attendance-simple', {
         'username': username,
         'password': password,
-        'semester': semester,
-        'month': month,
-        'year': year,
       });
 
       final typed = result as Map<String, dynamic>;
-      List<dynamic> months = typed['months'] as List? ?? [];
-
-      // Fallback: if requested combo has no rows, show simple endpoint data.
-      if (months.isEmpty) {
-        final simple = await ApiClient.instance.post('/live/monthly-attendance-simple', {
-          'username': username,
-          'password': password,
-        }) as Map<String, dynamic>;
-        months = simple['months'] as List? ?? [];
-        monthlyAttendance = months;
-        notifyListeners();
-        return simple;
-      }
-
-      monthlyAttendance = months;
+      monthlyAttendance = typed['months'] as List? ?? [];
       notifyListeners();
       return typed;
     } catch (e) {
