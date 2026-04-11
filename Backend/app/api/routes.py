@@ -7,6 +7,7 @@ Public routes: POST /auth/login, POST /auth/refresh
 Protected routes: require a valid Bearer JWT (enforced via Depends).
 """
 import logging
+from typing import Any
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -25,6 +26,11 @@ from app.db import timetable as tt_db
 from app.db import profile as profile_db
 from app.db import university_results as uni_db
 from app.services import sync as sync_service
+from app.scraper import session as session_scraper
+from app.scraper import profile as profile_scraper
+from app.scraper import attendance as attendance_scraper
+from app.scraper import marks as marks_scraper
+from app.scraper import university_results as uni_scraper
 from app.models.schemas import (
     SyncRequest,
     AttendanceSyncRequest,
@@ -70,6 +76,15 @@ class RefreshResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class LiveScrapeRequest(BaseModel):
+    username: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
+    include_university_results: bool = Field(
+        True,
+        description="Whether to compare live university results in /live/updates.",
+    )
+
+
 # ── Helpers ──────────────────────────────────────────────────────────
 
 def _require_student(roll: str) -> dict:
@@ -81,6 +96,181 @@ def _require_student(roll: str) -> dict:
             detail=f"Student '{roll}' not found. Login first.",
         )
     return student
+
+
+def _as_float(val: Any) -> float | None:
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
+
+
+def _attendance_changes(previous_rows: list[dict], live_rows: list[dict]) -> list[dict]:
+    prev = {r.get("subject_code"): r for r in previous_rows if r.get("subject_code")}
+    live = {r.get("subject_code"): r for r in live_rows if r.get("subject_code")}
+
+    updates: list[dict] = []
+
+    for subject_code, cur in live.items():
+        old = prev.get(subject_code)
+        if not old:
+            updates.append({
+                "category": "attendance",
+                "subject_code": subject_code,
+                "type": "new_subject",
+                "message": f"Attendance now tracked for {subject_code}.",
+                "current": cur,
+            })
+            continue
+
+        old_attended = int(old.get("classes_attended") or 0)
+        new_attended = int(cur.get("classes_attended") or 0)
+        old_total = int(old.get("classes_total") or 0)
+        new_total = int(cur.get("classes_total") or 0)
+        old_pct = _as_float(old.get("percentage"))
+        new_pct = _as_float(cur.get("percentage"))
+
+        changed = (old_attended != new_attended) or (old_total != new_total) or (old_pct != new_pct)
+        if changed:
+            delta_attended = new_attended - old_attended
+            delta_total = new_total - old_total
+
+            if delta_total > 0 and delta_attended == delta_total:
+                msg = f"Attendance improved in {subject_code}: attended {delta_attended} new class(es)."
+            elif delta_total > 0 and delta_attended < delta_total:
+                msg = f"Attendance dropped in {subject_code}: missed {delta_total - delta_attended} class(es)."
+            else:
+                msg = f"Attendance updated in {subject_code}."
+
+            updates.append({
+                "category": "attendance",
+                "subject_code": subject_code,
+                "type": "changed",
+                "message": msg,
+                "previous": {
+                    "classes_attended": old_attended,
+                    "classes_total": old_total,
+                    "percentage": old_pct,
+                },
+                "current": {
+                    "classes_attended": new_attended,
+                    "classes_total": new_total,
+                    "percentage": new_pct,
+                    "duty_leave": cur.get("duty_leave"),
+                },
+                "delta": {
+                    "classes_attended": delta_attended,
+                    "classes_total": delta_total,
+                    "percentage": None if old_pct is None or new_pct is None else round(new_pct - old_pct, 2),
+                },
+            })
+
+    for subject_code in sorted(set(prev) - set(live)):
+        updates.append({
+            "category": "attendance",
+            "subject_code": subject_code,
+            "type": "removed_subject",
+            "message": f"{subject_code} no longer appears in live attendance page.",
+            "previous": prev[subject_code],
+        })
+
+    return updates
+
+
+def _marks_changes(previous_rows: list[dict], live_rows: list[dict]) -> list[dict]:
+    def _key(row: dict) -> tuple[str, str, str]:
+        return (
+            str(row.get("subject_code") or ""),
+            str(row.get("exam_type") or ""),
+            str(row.get("exam_number") or ""),
+        )
+
+    prev = {_key(r): r for r in previous_rows}
+    live = {_key(r): r for r in live_rows}
+    updates: list[dict] = []
+
+    for key, cur in live.items():
+        old = prev.get(key)
+        subject_code, exam_type, exam_number = key
+        cur_mark = _as_float(cur.get("marks_obtained"))
+        old_mark = _as_float(old.get("marks_obtained")) if old else None
+
+        if not old:
+            updates.append({
+                "category": "marks",
+                "subject_code": subject_code,
+                "exam_type": exam_type,
+                "exam_number": exam_number,
+                "type": "new_result_row",
+                "message": f"New mark row found for {subject_code} ({exam_type} {exam_number}).",
+                "current": cur,
+            })
+            continue
+
+        if old_mark != cur_mark:
+            msg = (
+                f"New mark published for {subject_code} ({exam_type} {exam_number}): {cur_mark}."
+                if old_mark is None and cur_mark is not None
+                else f"Mark updated for {subject_code} ({exam_type} {exam_number})."
+            )
+            updates.append({
+                "category": "marks",
+                "subject_code": subject_code,
+                "exam_type": exam_type,
+                "exam_number": exam_number,
+                "type": "changed",
+                "message": msg,
+                "previous": {"marks_obtained": old_mark, "max_marks": _as_float(old.get("max_marks"))},
+                "current": {"marks_obtained": cur_mark, "max_marks": _as_float(cur.get("max_marks"))},
+                "delta": None if old_mark is None or cur_mark is None else round(cur_mark - old_mark, 2),
+            })
+
+    return updates
+
+
+def _university_result_changes(previous_rows: list[dict], live_rows: list[dict]) -> list[dict]:
+    def _key(row: dict) -> tuple[str, str]:
+        return (
+            str(row.get("exam_id") or ""),
+            str(row.get("subject_code") or ""),
+        )
+
+    prev = {_key(r): r for r in previous_rows}
+    live = {_key(r): r for r in live_rows}
+    updates: list[dict] = []
+
+    for key, cur in live.items():
+        old = prev.get(key)
+        exam_id, subject_code = key
+        if not old:
+            updates.append({
+                "category": "university_results",
+                "exam_id": exam_id,
+                "subject_code": subject_code,
+                "type": "new_result",
+                "message": f"New university result available for {subject_code} (exam {exam_id}).",
+                "current": cur,
+            })
+            continue
+
+        changed_fields = []
+        for field in ("grade", "result_status", "sgpa", "cgpa"):
+            if (old.get(field) or None) != (cur.get(field) or None):
+                changed_fields.append(field)
+
+        if changed_fields:
+            updates.append({
+                "category": "university_results",
+                "exam_id": exam_id,
+                "subject_code": subject_code,
+                "type": "changed",
+                "message": f"University result updated for {subject_code} ({', '.join(changed_fields)}).",
+                "changed_fields": changed_fields,
+                "previous": {f: old.get(f) for f in changed_fields},
+                "current": {f: cur.get(f) for f in changed_fields},
+            })
+
+    return updates
 
 
 # ── PUBLIC: POST /auth/login ─────────────────────────────────────────
@@ -210,6 +400,138 @@ def update_attendance(body: AttendanceSyncRequest, user: dict = Depends(get_curr
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
     return OKResponse(message=f"Attendance updated: {result['attendance_written']} rows for {result['roll_number']}")
+
+
+@router.post(
+    "/live/attendance-duty-leave",
+    response_model=dict,
+    summary="Live scrape: attendance with duty leave (no DB write)",
+)
+def get_live_attendance_with_duty_leave(
+    body: LiveScrapeRequest,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    try:
+        etlab = session_scraper.create_session(body.username, body.password)
+        profile = profile_scraper.scrape_profile(etlab)
+        roll_number = profile.get("roll_number")
+        etlab_user_id = profile.get("etlab_user_id")
+
+        if not etlab_user_id:
+            raise ValueError("etlab_user_id not found from profile/attendance navigation.")
+
+        rows = attendance_scraper.scrape_attendance_with_duty_leave(etlab, etlab_user_id)
+        return {
+            "roll_number": roll_number,
+            "etlab_user_id": etlab_user_id,
+            "scraped_at": profile.get("scraped_at"),
+            "attendance": rows,
+            "count": len(rows),
+        }
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except Exception as exc:
+        log.exception("Unexpected error during live duty-leave attendance scrape")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@router.post(
+    "/live/monthly-attendance",
+    response_model=dict,
+    summary="Live scrape: month-wise attendance view (no DB write)",
+)
+def get_live_monthly_attendance(
+    body: LiveScrapeRequest,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    try:
+        etlab = session_scraper.create_session(body.username, body.password)
+        profile = profile_scraper.scrape_profile(etlab)
+        monthly = attendance_scraper.scrape_monthly_attendance(etlab)
+
+        return {
+            "roll_number": profile.get("roll_number"),
+            "etlab_user_id": monthly.get("etlab_user_id") or profile.get("etlab_user_id"),
+            "scraped_at": monthly.get("scraped_at"),
+            "months": monthly.get("months", []),
+            "count": len(monthly.get("months", [])),
+        }
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    except Exception as exc:
+        log.exception("Unexpected error during monthly attendance scrape")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@router.post(
+    "/live/updates",
+    response_model=dict,
+    summary="Compare live ETLAB data vs last synced DB data (no DB write)",
+)
+def get_live_updates(
+    body: LiveScrapeRequest,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    try:
+        sb = get_supabase()
+        etlab = session_scraper.create_session(body.username, body.password)
+        profile = profile_scraper.scrape_profile(etlab)
+        roll_number = profile.get("roll_number")
+        etlab_user_id = profile.get("etlab_user_id")
+
+        if not roll_number:
+            raise ValueError("roll_number not found from profile page.")
+        if not etlab_user_id:
+            raise ValueError("etlab_user_id not found from profile/attendance navigation.")
+
+        student = students_db.get_student_by_roll(sb, roll_number)
+        if not student:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No synced baseline found for {roll_number}. Run /sync-all first.",
+            )
+
+        student_id = student["id"]
+
+        prev_attendance = att_db.get_attendance(sb, student_id)
+        prev_marks = marks_db.get_marks(sb, student_id)
+        prev_university = uni_db.get_university_results(sb, student_id)
+
+        live_attendance = attendance_scraper.scrape_attendance_with_duty_leave(etlab, etlab_user_id)
+        live_marks = marks_scraper.scrape_marks(etlab)
+        live_university = uni_scraper.scrape_university_results(etlab) if body.include_university_results else []
+
+        attendance_updates = _attendance_changes(prev_attendance, live_attendance)
+        marks_updates = _marks_changes(prev_marks, live_marks)
+        university_updates = (
+            _university_result_changes(prev_university, live_university)
+            if body.include_university_results
+            else []
+        )
+
+        updates = attendance_updates + marks_updates + university_updates
+
+        return {
+            "roll_number": roll_number,
+            "etlab_user_id": etlab_user_id,
+            "total_changes": len(updates),
+            "attendance_changes": attendance_updates,
+            "marks_changes": marks_updates,
+            "university_result_changes": university_updates,
+            "updates": updates,
+            "checked_against_last_sync": True,
+        }
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Unexpected error during live updates comparison")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
 # ── GET /profile/{roll} ──────────────────────────────────────────────
