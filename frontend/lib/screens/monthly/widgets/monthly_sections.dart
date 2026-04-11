@@ -51,28 +51,25 @@ class MonthlyCalendarCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GridView.count(
-            crossAxisCount: 7,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 1,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
+          Row(
             children: [
               for (final label in const ['S', 'M', 'T', 'W', 'T', 'F', 'S'])
-                Center(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: scheme.onSurfaceVariant,
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        height: 1,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 0),
           GridView.count(
             crossAxisCount: 7,
             shrinkWrap: true,
@@ -183,6 +180,7 @@ class MonthlyDayDetailCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final entries = (month['entries'] as List? ?? []).cast<Map<String, dynamic>>();
     final selected = entries.cast<Map<String, dynamic>?>().firstWhere(
       (entry) => (entry?['day'] as num?)?.toInt() == selectedDay,
@@ -217,15 +215,15 @@ class MonthlyDayDetailCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withAlpha(16),
+                    color: scheme.primary.withAlpha(14),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: Colors.blue.withAlpha(70)),
+                    border: Border.all(color: scheme.primary.withAlpha(80)),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Holiday',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                      color: scheme.primary,
                     ),
                   ),
                 ),
@@ -331,12 +329,12 @@ String ordinal(int day) {
 }
 
 Color colorForSummary(String summary) {
-  if (summary.contains('present')) return Colors.green;
-  if (summary.contains('absent')) return Colors.red;
-  if (summary.contains('duty')) return Colors.orange;
-  if (summary.contains('late')) return Colors.amber;
-  if (summary.contains('holiday')) return Colors.blue;
-  return Colors.grey;
+  if (summary.contains('present')) return Colors.teal.shade600;
+  if (summary.contains('absent')) return Colors.red.shade600;
+  if (summary.contains('duty')) return Colors.blue.shade700;
+  if (summary.contains('late')) return Colors.deepPurple.shade400;
+  if (summary.contains('holiday')) return Colors.indigo.shade400;
+  return Colors.blueGrey.shade400;
 }
 
 Color colorForCounts(Map<String, dynamic> counts) {
@@ -345,8 +343,9 @@ Color colorForCounts(Map<String, dynamic> counts) {
   final dutyLeave = (counts['duty_leave'] as int?) ?? 0;
   final holiday = (counts['holiday'] as int?) ?? 0;
 
-  if (holiday > 0) return Colors.blue;
-  if (absent > 0 || dutyLeave > 0) return Colors.orange;
-  if (present > 0) return Colors.green;
-  return Colors.grey;
+  if (holiday > 0) return Colors.indigo.shade400;
+  if (absent > 0) return Colors.red.shade600;
+  if (dutyLeave > 0) return Colors.blue.shade700;
+  if (present > 0) return Colors.teal.shade600;
+  return Colors.blueGrey.shade400;
 }

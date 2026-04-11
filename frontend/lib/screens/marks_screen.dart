@@ -72,22 +72,37 @@ class _MarksScreenState extends State<MarksScreen> with SingleTickerProviderStat
   static int _examPriority(String key) {
     final k = key.toLowerCase();
     final n = int.tryParse(RegExp(r'\d+').firstMatch(k)?.group(0) ?? '') ?? 99;
-    if (k.contains('series') || k.contains('cat')) return n;
+    if (k.contains('cat')) return n;
     if (k.contains('assignment') || k.contains('assign')) return 100 + n;
     return 200 + n;
   }
-  static String _examLabel(Map row) {
-    final label = row['exam_label']?.toString().trim() ?? '';
-    if (label.isNotEmpty) return label;
 
-    final typeRaw = row['exam_type']?.toString().trim() ?? '';
+  static String _normalizeExamLabel(String raw, String examNumber) {
+    final normalized = raw.trim().toLowerCase().replaceAll('_', ' ').replaceAll('-', ' ');
+    final num = RegExp(r'\d+').firstMatch(examNumber)?.group(0) ?? RegExp(r'\d+').firstMatch(normalized)?.group(0) ?? '';
+
+    if (normalized.contains('series') || normalized.contains('cat')) {
+      return num.isNotEmpty ? 'CAT $num' : 'CAT';
+    }
+    if (normalized.contains('assignment') || normalized.contains('assign')) {
+      return num.isNotEmpty ? 'Assignment $num' : 'Assignment';
+    }
+    return raw.trim().isNotEmpty ? raw.trim() : 'Unknown Exam';
+  }
+
+  static String _examLabel(Map row) {
+    final labelRaw = row['exam_label']?.toString() ?? '';
+    final typeRaw = row['exam_type']?.toString() ?? '';
     final numRaw = row['exam_number']?.toString().trim() ?? '';
 
-    if (typeRaw.isNotEmpty && numRaw.isNotEmpty) {
-      final num = RegExp(r'\d+').firstMatch(numRaw)?.group(0) ?? numRaw;
-      return '$typeRaw $num';
+    if (labelRaw.trim().isNotEmpty) {
+      return _normalizeExamLabel(labelRaw, numRaw);
     }
-    if (typeRaw.isNotEmpty) return typeRaw;
+
+    if (typeRaw.trim().isNotEmpty) {
+      return _normalizeExamLabel(typeRaw, numRaw);
+    }
+
     return 'Unknown Exam';
   }
 
@@ -109,40 +124,54 @@ class _MarksScreenState extends State<MarksScreen> with SingleTickerProviderStat
     final sortedEntries = groups.entries.toList()..sort((a, b) => _examPriority(a.key).compareTo(_examPriority(b.key)));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Marks'),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshMarksWithFeedback,
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabCtrl,
-          tabs: const [
-            Tab(text: 'Results'),
-            Tab(text: 'Analysis'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabCtrl,
+      body: Column(
         children: [
-          MarksResultsTab(
-            sortedEntries: sortedEntries,
-            onRefresh: _refreshMarksWithFeedback,
-            scheme: scheme,
+          Container(
+            color: scheme.primary,
+            child: SafeArea(
+              bottom: false,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TabBar(
+                      controller: _tabCtrl,
+                      labelColor: scheme.onPrimary,
+                      unselectedLabelColor: scheme.onPrimary.withAlpha(160),
+                      indicatorColor: scheme.onPrimary,
+                      dividerColor: Colors.transparent,
+                      tabs: const [Tab(text: 'Results'), Tab(text: 'Analysis')],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Refresh marks',
+                    icon: Icon(Icons.refresh_rounded, color: scheme.onPrimary),
+                    onPressed: _refreshMarksWithFeedback,
+                  ),
+                ],
+              ),
+            ),
           ),
-          MarksAnalysisTab(
-            analysisData: _analysisData,
-            onRefresh: _refreshAnalysisWithFeedback,
-            onUpdateAssignment: (index, value) {
-              setState(() {
-                final item = _analysisData[index];
-                item.assignment = value.clamp(0, item.assignmentScale);
-              });
-            },
+          Expanded(
+            child: TabBarView(
+              controller: _tabCtrl,
+              children: [
+                MarksResultsTab(
+                  sortedEntries: sortedEntries,
+                  onRefresh: _refreshMarksWithFeedback,
+                  scheme: scheme,
+                ),
+                MarksAnalysisTab(
+                  analysisData: _analysisData,
+                  onRefresh: _refreshAnalysisWithFeedback,
+                  onUpdateAssignment: (index, value) {
+                    setState(() {
+                      final item = _analysisData[index];
+                      item.assignment = value.clamp(0, item.assignmentScale);
+                    });
+                  },
+                ),
+              ],
+            ),
           ),
         ],
       ),

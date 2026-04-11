@@ -20,8 +20,31 @@ String _greeting() {
   return 'Good evening,';
 }
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autoFetchDutyLeave());
+  }
+
+  Future<void> _autoFetchDutyLeave() async {
+    if (!mounted) return;
+    final auth = context.read<AuthService>();
+    final data = context.read<StudentData>();
+    final username = auth.username;
+    final password = auth.password;
+    if (username == null || password == null) return;
+    try {
+      await data.fetchLiveDutyLeaveAttendance(username, password);
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {

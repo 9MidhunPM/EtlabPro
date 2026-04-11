@@ -4,9 +4,10 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/student_data.dart';
 import '../utils/attendance_analysis.dart';
+import '../widgets/screen_parts.dart';
 import 'attendance/widgets/analysis_tab.dart';
 import 'attendance/widgets/attendance_tab.dart';
-import 'attendance/widgets/duty_leave_tab.dart';
+import 'monthly/widgets/monthly_sections.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -19,12 +20,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
   late final TabController _tabCtrl;
   DateTime _targetDate = DateTime.now().add(const Duration(days: 30));
   AttendanceAnalysis? _analysis;
-  bool _dutyLeaveLoading = false;
+  bool _includeDutyLeave = false;
+  bool _monthlyLoading = false;
+  String? _monthlyError;
+  Map<String, dynamic>? _currentMonth;
+  int? _selectedDay;
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 3, vsync: this);
+    _loadMonthlyAttendance();
   }
 
   @override
@@ -72,29 +78,74 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
     messenger.showSnackBar(const SnackBar(content: Text('Attendance updated'), duration: Duration(milliseconds: 900)));
   }
 
-  Future<void> _fetchDutyLeaveAttendance() async {
+  Future<void> _loadMonthlyAttendance() async {
     final data = context.read<StudentData>();
     final auth = context.read<AuthService>();
 
     if (auth.username == null || auth.password == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Session not ready. Please login again.')));
       return;
     }
 
-    setState(() => _dutyLeaveLoading = true);
+    setState(() {
+      _monthlyLoading = true;
+      _monthlyError = null;
+    });
+
     try {
-      await data.fetchLiveDutyLeaveAttendance(auth.username!, auth.password!);
+      final result = await data.fetchLiveMonthlyAttendance(
+        username: auth.username!,
+        password: auth.password!,
+      );
+      final months = (result['months'] as List? ?? []).cast<Map<String, dynamic>>();
+      final month = _pickLatestMonth(months);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Duty leave attendance updated'), duration: Duration(milliseconds: 900)));
+      setState(() {
+        _currentMonth = month;
+        _selectedDay = month == null ? null : _firstSelectableDay(month);
+      });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      setState(() => _monthlyError = 'Failed to load monthly attendance: $e');
     } finally {
-      if (mounted) setState(() => _dutyLeaveLoading = false);
+      if (mounted) setState(() => _monthlyLoading = false);
     }
+  }
+
+  Map<String, dynamic>? _pickLatestMonth(List<Map<String, dynamic>> months) {
+    if (months.isEmpty) return null;
+
+    int monthIndex(String? month) {
+      final key = (month ?? '').trim().toLowerCase();
+      const lookup = {
+        'jan': 1,
+        'feb': 2,
+        'mar': 3,
+        'apr': 4,
+        'may': 5,
+        'jun': 6,
+        'jul': 7,
+        'aug': 8,
+        'sep': 9,
+        'oct': 10,
+        'nov': 11,
+        'dec': 12,
+      };
+      return lookup[key.length >= 3 ? key.substring(0, 3) : key] ?? 0;
+    }
+
+    DateTime score(Map<String, dynamic> month) {
+      final year = int.tryParse(month['year']?.toString() ?? '') ?? 0;
+      return DateTime(year, monthIndex(month['month']?.toString()));
+    }
+
+    months.sort((a, b) => score(a).compareTo(score(b)));
+    return months.last;
+  }
+
+  int _firstSelectableDay(Map<String, dynamic> month) {
+    final entries = (month['entries'] as List? ?? []).cast<Map<String, dynamic>>();
+    if (entries.isEmpty) return 1;
+    return (entries.first['day'] as num?)?.toInt() ?? 1;
   }
 
   @override
@@ -118,7 +169,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                       unselectedLabelColor: scheme.onPrimary.withAlpha(160),
                       indicatorColor: scheme.onPrimary,
                       dividerColor: Colors.transparent,
-                      tabs: const [Tab(text: 'Attendance'), Tab(text: 'Analysis'), Tab(text: 'Duty Leave')],
+                      tabs: const [Tab(text: 'Attendance'), Tab(text: 'Monthly'), Tab(text: 'Analysis')],
                     ),
                   ),
                   Padding(
@@ -126,7 +177,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                     child: IconButton(
                       icon: Icon(Icons.refresh_rounded, color: scheme.onPrimary),
                       tooltip: 'Refresh',
-                      onPressed: _refreshAttendanceWithFeedback,
+                      onPressed: () async {
+                        await _refreshAttendanceWithFeedback();
+                        await _loadMonthlyAttendance();
+                      },
                     ),
                   ),
                 ],
@@ -137,7 +191,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
             child: TabBarView(
               controller: _tabCtrl,
               children: [
-                AttendanceTab(data: data, scheme: scheme, onRefresh: _refreshAttendanceWithFeedback),
+                AttendanceTab(
+                  data: data,
+                  scheme: scheme,
+                  onRefresh: _refreshAttendanceWithFeedback,
+                  includeDutyLeave: _includeDutyLeave,
+                  onIncludeDutyLeaveChanged: (value) => setState(() => _includeDutyLeave = value),
+                ),
+                _buildMonthlyTab(),
                 AttendanceAnalysisTab(
                   data: data,
                   targetDate: _targetDate,
@@ -145,15 +206,44 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                   onPickDate: _pickDate,
                   onAnalyze: _analyze,
                 ),
-                DutyLeaveTab(
-                  data: data,
-                  scheme: scheme,
-                  isLoading: _dutyLeaveLoading,
-                  onRefresh: _fetchDutyLeaveAttendance,
-                ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthlyTab() {
+    final month = _currentMonth;
+    if (_monthlyLoading && month == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadMonthlyAttendance,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (_monthlyError != null) ...[
+            ScreenErrorCard(message: _monthlyError!),
+            const SizedBox(height: 16),
+          ],
+          if (month != null) ...[
+            MonthlyCalendarCard(
+              month: month,
+              selectedDay: _selectedDay,
+              onDaySelected: (day) => setState(() => _selectedDay = day),
+            ),
+            const SizedBox(height: 16),
+            MonthlyDayDetailCard(month: month, selectedDay: _selectedDay),
+          ] else if (!_monthlyLoading) ...[
+            const ScreenEmptyState(
+              icon: Icons.calendar_month,
+              title: 'No monthly attendance data available',
+            ),
+          ],
         ],
       ),
     );

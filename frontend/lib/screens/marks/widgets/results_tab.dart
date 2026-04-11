@@ -42,6 +42,7 @@ class ExamGroupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final leadingIcon = _examIcon(examLabel);
     return Container(
       margin: const EdgeInsets.only(top: 12),
       decoration: BoxDecoration(
@@ -59,7 +60,7 @@ class ExamGroupCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.quiz_outlined, size: 16, color: scheme.onPrimary),
+                Icon(leadingIcon, size: 16, color: scheme.onPrimary),
                 const SizedBox(width: 8),
                 Text(examLabel, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: scheme.onPrimary, letterSpacing: 0.5)),
               ],
@@ -94,5 +95,12 @@ class ExamGroupCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  IconData _examIcon(String label) {
+    final k = label.toLowerCase();
+    if (k.contains('cat')) return Icons.fact_check_outlined;
+    if (k.contains('assignment')) return Icons.assignment_turned_in_outlined;
+    return Icons.description_outlined;
   }
 }

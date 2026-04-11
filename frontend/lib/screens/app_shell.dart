@@ -41,7 +41,6 @@ class AppShell extends StatelessWidget {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined),          selectedIcon: Icon(Icons.home_rounded),          label: 'Home'),
           NavigationDestination(icon: Icon(Icons.fact_check_outlined),    selectedIcon: Icon(Icons.fact_check_rounded),    label: 'Attendance'),
-          NavigationDestination(icon: Icon(Icons.calendar_month_outlined),selectedIcon: Icon(Icons.calendar_month_rounded),label: 'Monthly'),
           NavigationDestination(icon: Icon(Icons.grade_outlined),         selectedIcon: Icon(Icons.grade_rounded),         label: 'Results'),
           NavigationDestination(icon: Icon(Icons.notifications_outlined), selectedIcon: Icon(Icons.notifications_rounded), label: 'Updates'),
           NavigationDestination(icon: Icon(Icons.school_outlined),        selectedIcon: Icon(Icons.school_rounded),        label: 'End Sem'),

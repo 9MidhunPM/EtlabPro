@@ -7,16 +7,36 @@ class AttendanceTab extends StatelessWidget {
   final StudentData data;
   final ColorScheme scheme;
   final Future<void> Function() onRefresh;
+  final bool includeDutyLeave;
+  final ValueChanged<bool> onIncludeDutyLeaveChanged;
 
-  const AttendanceTab({super.key, required this.data, required this.scheme, required this.onRefresh});
+  const AttendanceTab({
+    super.key,
+    required this.data,
+    required this.scheme,
+    required this.onRefresh,
+    required this.includeDutyLeave,
+    required this.onIncludeDutyLeaveChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     final rows = data.attendance;
+    final dutyRows = data.dutyLeaveAttendance;
     final subjectRows = rows.where((r) {
       final code = r['subject_code']?.toString().toLowerCase();
       return code != 'total';
     }).toList();
+
+    final dutySubjectRows = dutyRows.where((r) {
+      final code = r['subject_code']?.toString().toLowerCase();
+      return code != null && code != 'total';
+    }).toList();
+
+    final dutyByCode = <String, dynamic>{
+      for (final row in dutySubjectRows)
+        (row['subject_code']?.toString().toLowerCase() ?? ''): row,
+    };
 
     if (subjectRows.isEmpty) {
       return Center(
@@ -35,11 +55,33 @@ class AttendanceTab extends StatelessWidget {
       (r) => r != null && r['subject_code']?.toString().toLowerCase() == 'total',
       orElse: () => null,
     );
-    final avg = subjectRows.map((r) => (r['percentage'] as num?)?.toDouble() ?? 0).reduce((a, b) => a + b) / subjectRows.length;
-    final overall = ((totalRow?['percentage'] as num?)?.toDouble()) ?? avg;
-    final lowCount = subjectRows.where((r) => ((r['percentage'] as num?)?.toDouble() ?? 0) < 75).length;
+
+    final dutyTotalRow = dutyRows.cast<Map<String, dynamic>?>().firstWhere(
+      (r) => r != null && r['subject_code']?.toString().toLowerCase() == 'total',
+      orElse: () => null,
+    );
+
+    final hasDutyData = dutySubjectRows.isNotEmpty;
+    final useDuty = includeDutyLeave && hasDutyData;
+
+    double pctFor(dynamic row) {
+      final code = row['subject_code']?.toString().toLowerCase() ?? '';
+      if (useDuty && code.isNotEmpty) {
+        final duty = dutyByCode[code];
+        final dutyPct = (duty?['percentage'] as num?)?.toDouble();
+        if (dutyPct != null) return dutyPct;
+      }
+      return (row['percentage'] as num?)?.toDouble() ?? 0;
+    }
+
+    final avg = subjectRows.map((r) => pctFor(r)).reduce((a, b) => a + b) / subjectRows.length;
+    final overall = useDuty
+        ? ((dutyTotalRow?['percentage'] as num?)?.toDouble() ?? avg)
+        : (((totalRow?['percentage'] as num?)?.toDouble()) ?? avg);
+
+    final lowCount = subjectRows.where((r) => pctFor(r) < 75).length;
     final safeCount = subjectRows.where((r) {
-      final pct = (r['percentage'] as num?)?.toDouble() ?? 0;
+      final pct = pctFor(r);
       return pct >= 75 && pct < 90;
     }).length;
     final strongCount = subjectRows.length - lowCount - safeCount;
@@ -47,8 +89,7 @@ class AttendanceTab extends StatelessWidget {
     final attendanceMark = calculateAttendanceMarks(overall) ?? 0;
     final markBand = attendanceMarkBand(overall);
 
-    final sortedRows = List<dynamic>.from(subjectRows)
-      ..sort((a, b) => ((a['percentage'] as num?) ?? 0).compareTo((b['percentage'] as num?) ?? 0));
+    final sortedRows = List<dynamic>.from(subjectRows)..sort((a, b) => pctFor(a).compareTo(pctFor(b)));
 
     return RefreshIndicator(
       onRefresh: onRefresh,
@@ -64,8 +105,29 @@ class AttendanceTab extends StatelessWidget {
             safeCount: safeCount,
             strongCount: strongCount,
             subjectCount: subjectRows.length,
+            includeDutyLeave: includeDutyLeave,
+            hasDutyData: hasDutyData,
+            onIncludeDutyLeaveChanged: onIncludeDutyLeaveChanged,
           ),
           const SizedBox(height: 16),
+          if (includeDutyLeave && !hasDutyData) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withAlpha(14),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.withAlpha(60)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('Duty leave data not loaded yet. Using regular attendance values.')),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
           if (lowCount > 0) ...[
             _RiskAlertCard(lowCount: lowCount, lowestRows: sortedRows.take(3).toList()),
             const SizedBox(height: 14),
@@ -78,7 +140,31 @@ class AttendanceTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          ...sortedRows.map((r) => _SubjectTile(row: r)),
+          ...sortedRows.map((r) {
+            final code = r['subject_code']?.toString().toLowerCase() ?? '';
+            final duty = dutyByCode[code];
+            final basePct = (r['percentage'] as num?)?.toDouble() ?? 0;
+            final dutyPct = (duty?['percentage'] as num?)?.toDouble();
+            final activePct = useDuty && dutyPct != null ? dutyPct : basePct;
+            final delta = (dutyPct ?? basePct) - basePct;
+            final baseAttended = (r['classes_attended'] as num?)?.toInt() ?? 0;
+            final activeAttended = useDuty
+              ? ((duty?['classes_attended'] as num?)?.toInt() ?? baseAttended)
+              : baseAttended;
+            final activeTotal = useDuty
+                ? ((duty?['classes_total'] as num?)?.toInt() ?? (r['classes_total'] as num?)?.toInt() ?? 0)
+                : ((r['classes_total'] as num?)?.toInt() ?? 0);
+
+            return _SubjectTile(
+              row: r,
+              activePct: activePct,
+              activeAttended: activeAttended,
+              activeTotal: activeTotal,
+              includeDutyLeave: useDuty,
+              dutyDeltaPct: delta,
+              dutyLeaveCount: (activeAttended - baseAttended).clamp(0, 9999),
+            );
+          }),
         ],
       ),
     );
@@ -93,6 +179,9 @@ class _OverallCard extends StatelessWidget {
   final int safeCount;
   final int strongCount;
   final int subjectCount;
+  final bool includeDutyLeave;
+  final bool hasDutyData;
+  final ValueChanged<bool> onIncludeDutyLeaveChanged;
 
   const _OverallCard({
     required this.overall,
@@ -102,6 +191,9 @@ class _OverallCard extends StatelessWidget {
     required this.safeCount,
     required this.strongCount,
     required this.subjectCount,
+    required this.includeDutyLeave,
+    required this.hasDutyData,
+    required this.onIncludeDutyLeaveChanged,
   });
 
   @override
@@ -138,6 +230,20 @@ class _OverallCard extends StatelessWidget {
                     Text(markBand, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: scheme.onPrimaryContainer)),
                   ],
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Text('Include Duty Leave?', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant)),
+              const Spacer(),
+              if (!hasDutyData)
+                Text('No data yet', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+              const SizedBox(width: 6),
+              Switch.adaptive(
+                value: includeDutyLeave,
+                onChanged: onIncludeDutyLeaveChanged,
               ),
             ],
           ),
@@ -316,12 +422,27 @@ class _RiskAlertCard extends StatelessWidget {
 
 class _SubjectTile extends StatelessWidget {
   final dynamic row;
-  const _SubjectTile({required this.row});
+  final double activePct;
+  final int activeAttended;
+  final int activeTotal;
+  final bool includeDutyLeave;
+  final double dutyDeltaPct;
+  final int? dutyLeaveCount;
+
+  const _SubjectTile({
+    required this.row,
+    required this.activePct,
+    required this.activeAttended,
+    required this.activeTotal,
+    required this.includeDutyLeave,
+    required this.dutyDeltaPct,
+    required this.dutyLeaveCount,
+  });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final pct = (row['percentage'] as num).toDouble();
+    final pct = activePct;
     final isLow = pct < 75;
     final color = isLow ? scheme.error : pct >= 90 ? Colors.green.shade700 : scheme.primary;
     final stdData = context.read<StudentData>();
@@ -333,9 +454,7 @@ class _SubjectTile extends StatelessWidget {
       }
     }
     final name = row['raw_subject_name'] ?? lookupName ?? row['subject_code'] ?? '—';
-    final attended = (row['classes_attended'] as num?)?.toInt();
-    final total = (row['classes_total'] as num?)?.toInt();
-    final requiredToRecover = _classesNeededToReach75(attended, total);
+    final requiredToRecover = _classesNeededToReach75(activeAttended, activeTotal);
     final status = pct >= 90 ? 'Strong' : pct >= 75 ? 'Safe' : 'Risk';
     final attMark = calculateAttendanceMarks(pct) ?? 0;
 
@@ -377,10 +496,37 @@ class _SubjectTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            '${attended ?? 0} / ${total ?? 0} classes attended${requiredToRecover > 0 ? ' • Need $requiredToRecover consecutive classes to reach 75%' : ''}',
-            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  '$activeAttended / $activeTotal classes attended',
+                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                ),
+              ),
+              if (includeDutyLeave && dutyDeltaPct.abs() > 0.05)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withAlpha(18),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.withAlpha(65)),
+                  ),
+                  child: Text(
+                    '${_pctDeltaLabel(dutyDeltaPct)}/+${dutyLeaveCount ?? 0} from duty leave',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.blue),
+                  ),
+                ),
+            ],
           ),
+          if (requiredToRecover > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Need $requiredToRecover consecutive classes to reach 75%',
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
+          ],
         ],
       ),
     );
@@ -392,5 +538,12 @@ class _SubjectTile extends StatelessWidget {
     if (current >= 75) return 0;
     final required = ((0.75 * total) - attended) / 0.25;
     return required.ceil().clamp(0, 10000);
+  }
+
+  String _pctDeltaLabel(double delta) {
+    final abs = delta.abs();
+    final nearInt = (abs - abs.roundToDouble()).abs() < 0.06;
+    final v = nearInt ? abs.round().toString() : abs.toStringAsFixed(1);
+    return '${delta >= 0 ? '+' : '-'}$v%';
   }
 }

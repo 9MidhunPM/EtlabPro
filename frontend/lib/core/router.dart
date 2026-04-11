@@ -43,9 +43,6 @@ GoRouter buildRouter(AuthService auth) {
             GoRoute(path: '/attendance', builder: (ctx, _) => const AttendanceScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/monthly-attendance', builder: (ctx, _) => const MonthlyAttendanceScreen()),
-          ]),
-          StatefulShellBranch(routes: [
             GoRoute(path: '/marks', builder: (ctx, _) => const MarksScreen()),
           ]),
           StatefulShellBranch(routes: [
