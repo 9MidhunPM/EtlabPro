@@ -841,17 +841,23 @@ class _DutyLeaveTab extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Calculate summary statistics
-    int totalDutyLeaves = 0;
-    Map<String, int> subjectDutyLeaveCounts = {};
-    
-    for (final row in rows) {
-      if (row['duty_leave'] != null && row['duty_leave'] is int) {
-        totalDutyLeaves += row['duty_leave'] as int;
-        final subject = row['subject_name']?.toString() ?? 'Unknown';
-        subjectDutyLeaveCounts[subject] = (subjectDutyLeaveCounts[subject] ?? 0) + (row['duty_leave'] as int);
-      }
-    }
+    final subjectRows = rows.where((row) {
+      final code = row['subject_code']?.toString().toLowerCase();
+      return code != null && code != 'total';
+    }).toList();
+
+    final totalRow = rows.cast<Map<String, dynamic>?>().firstWhere(
+      (row) => row != null && row['subject_code']?.toString().toLowerCase() == 'total',
+      orElse: () => null,
+    );
+
+    final average = subjectRows.isNotEmpty
+        ? subjectRows
+                .map((row) => (row['percentage'] as num?)?.toDouble() ?? 0)
+                .fold<double>(0, (sum, value) => sum + value) /
+            subjectRows.length
+        : 0.0;
+    final overall = (totalRow?['percentage'] as num?)?.toDouble() ?? average;
 
     return RefreshIndicator(
       onRefresh: onRefresh,
@@ -859,7 +865,6 @@ class _DutyLeaveTab extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          // Summary Card
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
@@ -874,54 +879,50 @@ class _DutyLeaveTab extends StatelessWidget {
                   children: [
                     Icon(Icons.assignment_outlined, color: Colors.orange, size: 20),
                     const SizedBox(width: 8),
-                    Text('Duty Leave Summary',
+                    Text('Duty Leave Attendance',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.orange)),
                   ],
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withAlpha(40),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Text(
-                          totalDutyLeaves.toString(),
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Total Duty Leaves',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: _DutyLeaveMetric(
+                        label: 'Subjects',
+                        value: subjectRows.length.toString(),
+                        color: Colors.orange,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _DutyLeaveMetric(
+                        label: 'Overall %',
+                        value: '${overall.toStringAsFixed(1)}%',
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          // By Subject
-          if (subjectDutyLeaveCounts.isNotEmpty) ...[
+          if (subjectRows.isNotEmpty) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('By Subject', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant)),
+                Text('Fetched from duty-leave page', style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
               ],
             ),
             const SizedBox(height: 8),
-            ...subjectDutyLeaveCounts.entries.map((e) {
+            ...subjectRows.map((row) {
+              final pct = (row['percentage'] as num?)?.toDouble() ?? 0;
+              final attended = (row['classes_attended'] as num?)?.toInt() ?? 0;
+              final total = (row['classes_total'] as num?)?.toInt() ?? 0;
+              final subject = row['subject_code']?.toString() ?? 'Unknown';
+              final dutyLeave = row['duty_leave'];
+
               return Card(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -937,11 +938,8 @@ class _DutyLeaveTab extends StatelessWidget {
                         ),
                         child: Center(
                           child: Text(
-                            e.value.toString(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange,
-                            ),
+                            '${pct.toStringAsFixed(0)}%',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
                           ),
                         ),
                       ),
@@ -951,7 +949,7 @@ class _DutyLeaveTab extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              e.key,
+                              subject,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
@@ -960,12 +958,20 @@ class _DutyLeaveTab extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              '${e.value} duty leave${e.value > 1 ? 's' : ''}',
+                              '$attended / $total classes attended',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: scheme.onSurfaceVariant,
                               ),
                             ),
+                            if (dutyLeave != null)
+                              Text(
+                                'Duty leave: $dutyLeave',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -988,17 +994,44 @@ class _DutyLeaveTab extends StatelessWidget {
                   ),
                 ),
               );
-            }).toList(),
+            }),
           ] else
             Center(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'No subject-wise duty leave data',
+                  'No duty-leave subject data returned',
                   style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DutyLeaveMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _DutyLeaveMetric({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withAlpha(24),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(60)),
+      ),
+      child: Column(
+        children: [
+          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
+          const SizedBox(height: 4),
+          Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
         ],
       ),
     );

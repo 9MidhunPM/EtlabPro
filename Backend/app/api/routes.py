@@ -477,6 +477,41 @@ def get_live_attendance_with_duty_leave(
 
 
 @router.post(
+    "/live/attendance",
+    response_model=dict,
+    summary="Live scrape: normal attendance (no DB write)",
+)
+def get_live_attendance(
+    body: LiveScrapeRequest,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    try:
+        etlab = session_scraper.create_session(body.username, body.password)
+        profile = profile_scraper.scrape_profile(etlab)
+        roll_number = profile.get("roll_number")
+        etlab_user_id = profile.get("etlab_user_id")
+
+        if not etlab_user_id:
+            raise ValueError("etlab_user_id not found from profile/attendance navigation.")
+
+        rows = attendance_scraper.scrape_attendance(etlab, etlab_user_id)
+        return {
+            "roll_number": roll_number,
+            "etlab_user_id": etlab_user_id,
+            "scraped_at": profile.get("scraped_at"),
+            "attendance": rows,
+            "count": len(rows),
+        }
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except Exception as exc:
+        log.exception("Unexpected error during live attendance scrape")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@router.post(
     "/live/monthly-attendance",
     response_model=dict,
     summary="Live scrape: month-wise attendance view (no DB write)",

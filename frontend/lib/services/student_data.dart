@@ -143,7 +143,14 @@ class StudentData extends ChangeNotifier {
 
   Future<void> _fetchAttendance(String roll) async {
     await _trackSectionLoad('Attendance', () async {
-      final r = await ApiClient.instance.get('/attendance/$roll');
+      final auth = await _loadStoredCredentials();
+      if (auth == null) {
+        throw StateError('Missing stored credentials for live attendance fetch.');
+      }
+      final r = await ApiClient.instance.post('/live/attendance', {
+        'username': auth.$1,
+        'password': auth.$2,
+      });
       attendance = (r as Map)['attendance'] as List;
       await _stamp(AppConstants.kAttendanceTs);
     });
@@ -210,6 +217,15 @@ class StudentData extends ChangeNotifier {
 
   Future<void> refreshAll(String roll) async {
     await loadAll(roll, force: true);
+  }
+
+  Future<(String, String)?> _loadStoredCredentials() async {
+    final username = await _secureStorage.read(key: AppConstants.kUsername);
+    final password = await _secureStorage.read(key: AppConstants.kPassword);
+    if (username == null || password == null) {
+      return null;
+    }
+    return (username, password);
   }
 
   // ── Live endpoints (duty leave, monthly attendance, updates) ────────
