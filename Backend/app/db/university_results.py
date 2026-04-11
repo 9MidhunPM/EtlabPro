@@ -16,17 +16,18 @@ log = logging.getLogger(__name__)
 
 # Map scraped pass-status strings to result_status_enum values
 _STATUS_MAP: dict[str, str] = {
-    "pass":    "pass",
-    "p":       "pass",
-    "fail":    "fail",
-    "f":       "fail",
-    "fc":      "fail",
-    "absent":  "absent",
-    "ab":      "absent",
-    "withheld":"withheld",
-    "wh":      "withheld",
+    "pass":     "pass",
+    "passed":   "pass",
+    "p":        "pass",
+    "fail":     "fail",
+    "failed":   "fail",
+    "f":        "fail",
+    "fc":       "fail",
+    "absent":   "absent",
+    "ab":       "absent",
+    "withheld": "withheld",
+    "wh":       "withheld",
 }
-
 
 def _map_result_status(raw: str | None) -> str | None:
     if not raw:

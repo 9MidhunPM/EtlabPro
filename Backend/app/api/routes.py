@@ -25,6 +25,7 @@ from app.db import attendance as att_db
 from app.db import timetable as tt_db
 from app.db import profile as profile_db
 from app.db import university_results as uni_db
+from app.db import sync_meta as sync_meta_db
 from app.services import sync as sync_service
 from app.scraper import session as session_scraper
 from app.scraper import profile as profile_scraper
@@ -106,8 +107,11 @@ def _as_float(val: Any) -> float | None:
 
 
 def _attendance_changes(previous_rows: list[dict], live_rows: list[dict]) -> list[dict]:
-    prev = {r.get("subject_code"): r for r in previous_rows if r.get("subject_code")}
-    live = {r.get("subject_code"): r for r in live_rows if r.get("subject_code")}
+    def _is_real_subject(code: Any) -> bool:
+        return bool(code) and str(code).strip().lower() != "total"
+
+    prev = {r.get("subject_code"): r for r in previous_rows if _is_real_subject(r.get("subject_code"))}
+    live = {r.get("subject_code"): r for r in live_rows if _is_real_subject(r.get("subject_code"))}
 
     updates: list[dict] = []
 
@@ -130,7 +134,9 @@ def _attendance_changes(previous_rows: list[dict], live_rows: list[dict]) -> lis
         old_pct = _as_float(old.get("percentage"))
         new_pct = _as_float(cur.get("percentage"))
 
-        changed = (old_attended != new_attended) or (old_total != new_total) or (old_pct != new_pct)
+        # Treat attendance as changed only when attendance counts change.
+        # Percentage-only drift can happen from DB precision vs portal rounding.
+        changed = (old_attended != new_attended) or (old_total != new_total)
         if changed:
             delta_attended = new_attended - old_attended
             delta_total = new_total - old_total
@@ -235,6 +241,20 @@ def _university_result_changes(previous_rows: list[dict], live_rows: list[dict])
             str(row.get("subject_code") or ""),
         )
 
+    def _norm_status(val: Any) -> str | None:
+        if val is None:
+            return None
+        s = str(val).strip().lower()
+        if s in {"pass", "passed", "p"}:
+            return "pass"
+        if s in {"fail", "failed", "f", "fc"}:
+            return "fail"
+        if s in {"absent", "ab"}:
+            return "absent"
+        if s in {"withheld", "wh"}:
+            return "withheld"
+        return s or None
+
     prev = {_key(r): r for r in previous_rows}
     live = {_key(r): r for r in live_rows}
     updates: list[dict] = []
@@ -255,7 +275,12 @@ def _university_result_changes(previous_rows: list[dict], live_rows: list[dict])
 
         changed_fields = []
         for field in ("grade", "result_status", "sgpa", "cgpa"):
-            if (old.get(field) or None) != (cur.get(field) or None):
+            old_val = old.get(field) or None
+            cur_val = cur.get(field) or None
+            if field == "result_status":
+                old_val = _norm_status(old_val)
+                cur_val = _norm_status(cur_val)
+            if old_val != cur_val:
                 changed_fields.append(field)
 
         if changed_fields:
@@ -468,7 +493,7 @@ def get_live_monthly_attendance(
 @router.post(
     "/live/updates",
     response_model=dict,
-    summary="Compare live ETLAB data vs last synced DB data (no DB write)",
+    summary="Compare live ETLAB data vs DB, then refresh baseline to avoid duplicate updates",
 )
 def get_live_updates(
     body: LiveScrapeRequest,
@@ -503,6 +528,9 @@ def get_live_updates(
         live_marks = marks_scraper.scrape_marks(etlab)
         live_university = uni_scraper.scrape_university_results(etlab) if body.include_university_results else []
 
+        # Ignore synthetic totals row from attendance table for change tracking/baseline writes.
+        live_attendance = [r for r in live_attendance if str(r.get("subject_code") or "").strip().lower() != "total"]
+
         attendance_updates = _attendance_changes(prev_attendance, live_attendance)
         marks_updates = _marks_changes(prev_marks, live_marks)
         university_updates = (
@@ -513,6 +541,17 @@ def get_live_updates(
 
         updates = attendance_updates + marks_updates + university_updates
 
+        # Refresh DB baseline so next /live/updates only returns truly new changes.
+        att_written = att_db.upsert_attendance(sb, student_id, live_attendance)
+        marks_written = marks_db.upsert_marks(sb, student_id, live_marks)
+        sync_meta_db.mark_synced(sb, student_id, "attendance", rows_written=att_written)
+        sync_meta_db.mark_synced(sb, student_id, "marks", rows_written=marks_written)
+
+        uni_written = 0
+        if body.include_university_results:
+            uni_written = uni_db.upsert_university_results(sb, student_id, live_university)
+            sync_meta_db.mark_synced(sb, student_id, "university_results", rows_written=uni_written)
+
         return {
             "roll_number": roll_number,
             "etlab_user_id": etlab_user_id,
@@ -522,6 +561,12 @@ def get_live_updates(
             "university_result_changes": university_updates,
             "updates": updates,
             "checked_against_last_sync": True,
+            "baseline_refreshed": True,
+            "baseline_rows_written": {
+                "attendance": att_written,
+                "marks": marks_written,
+                "university_results": uni_written,
+            },
         }
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc

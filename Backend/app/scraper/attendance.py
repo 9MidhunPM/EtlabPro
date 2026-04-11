@@ -98,6 +98,35 @@ def _status_from_text_and_classes(text: str, classes: str) -> str | None:
     return None
 
 
+def _canonical_cell_status(td, text: str) -> str:
+    classes = {c.lower().strip() for c in (td.get("class") or [])}
+    low = text.lower().strip()
+
+    if "present" in classes:
+        return "present"
+    if "absent" in classes:
+        return "absent"
+    if "late" in classes:
+        return "late"
+    if "duty-leave" in classes or "duty_leave" in classes or "duty" in classes:
+        return "duty_leave"
+    if "holiday" in classes or "h-day" in classes or "hday" in classes:
+        return "holiday"
+    if "n-a" in classes or "na" in classes:
+        return "na"
+
+    # Fallback heuristics for occasional markup variations.
+    if "duty" in low and "leave" in low:
+        return "duty_leave"
+    if "absent" in low:
+        return "absent"
+    if "late" in low:
+        return "late"
+    if text.strip():
+        return "present"
+    return "na"
+
+
 def scrape_attendance(session: requests.Session, etlab_user_id: str) -> list[dict]:
     """
     Args:
@@ -226,56 +255,132 @@ def scrape_monthly_attendance(session: requests.Session) -> dict:
     if m:
         etlab_user_id = m.group(1)
 
-    months: dict[str, dict] = {}
+    month_select = soup.find("select", id="month")
+    year_select = soup.find("select", id="year")
+    semester_select = soup.find("select", id="semester")
 
-    for element in soup.find_all(["tr", "div", "li"]):
-        text = element.get_text(" ", strip=True)
-        if not text:
+    def _selected_or_last(select_tag) -> str | None:
+        if not select_tag:
+            return None
+        selected = select_tag.find("option", selected=True)
+        if selected:
+            return selected.get_text(" ", strip=True)
+        options = select_tag.find_all("option")
+        return options[-1].get_text(" ", strip=True) if options else None
+
+    month_label = _selected_or_last(month_select)
+    year_label = _selected_or_last(year_select)
+    semester_label = _selected_or_last(semester_select)
+
+    if not month_label:
+        till_match = re.search(r"%\s*till\s*([A-Za-z]+)", soup.get_text(" ", strip=True), flags=re.I)
+        if till_match:
+            month_label = till_match.group(1).title()
+    if not month_label:
+        month_label = "Unknown"
+
+    bucket = {
+        "month": month_label,
+        "year": year_label,
+        "semester": semester_label,
+        "days_present": 0,
+        "days_absent": 0,
+        "days_duty_leave": 0,
+        "days_late": 0,
+        "days_holiday": 0,
+        "days_na": 0,
+        "total_marked_days": 0,
+        "period_present": 0,
+        "period_absent": 0,
+        "period_duty_leave": 0,
+        "period_late": 0,
+        "period_holiday": 0,
+        "period_na": 0,
+        "period_total": 0,
+        "entries": [],
+    }
+
+    table = soup.find("table")
+    if not table:
+        return {
+            "etlab_user_id": etlab_user_id,
+            "months": [bucket],
+            "scraped_at": datetime.utcnow().isoformat(),
+        }
+
+    rows = table.find_all("tr")
+    for tr in rows[1:]:
+        day_th = tr.find("th")
+        tds = tr.find_all("td")
+        if not day_th or not tds:
             continue
 
-        month_label = _extract_month_label(text) or "Unknown"
-        date_value = _extract_date(text)
-        classes = " ".join(element.get("class", []))
-        status = _status_from_text_and_classes(text, classes)
-
-        if not date_value or not status:
+        day_match = re.search(r"\d+", day_th.get_text(" ", strip=True))
+        if not day_match:
             continue
+        day = int(day_match.group(0))
 
-        bucket = months.setdefault(month_label, {
-            "month": month_label,
-            "days_present": 0,
-            "days_absent": 0,
-            "days_duty_leave": 0,
-            "total_marked_days": 0,
-            "entries": [],
-        })
+        day_counts = {
+            "present": 0,
+            "absent": 0,
+            "duty_leave": 0,
+            "late": 0,
+            "holiday": 0,
+            "na": 0,
+        }
+        periods: list[dict] = []
 
-        if status == "present":
+        period_index = 1
+        for td in tds:
+            colspan = int(td.get("colspan", "1") or "1")
+            text = td.get_text(" ", strip=True)
+            status = _canonical_cell_status(td, text)
+
+            for _ in range(max(colspan, 1)):
+                periods.append({
+                    "period": period_index,
+                    "status": status,
+                    "subject": text or None,
+                })
+                period_index += 1
+
+            day_counts[status] = day_counts.get(status, 0) + max(colspan, 1)
+
+        bucket["period_total"] += len(periods)
+        bucket["period_present"] += day_counts.get("present", 0)
+        bucket["period_absent"] += day_counts.get("absent", 0)
+        bucket["period_duty_leave"] += day_counts.get("duty_leave", 0)
+        bucket["period_late"] += day_counts.get("late", 0)
+        bucket["period_holiday"] += day_counts.get("holiday", 0)
+        bucket["period_na"] += day_counts.get("na", 0)
+
+        dominant = max(day_counts, key=lambda k: day_counts.get(k, 0)) if day_counts else "na"
+        if dominant == "present":
             bucket["days_present"] += 1
-        elif status == "absent":
+        elif dominant == "absent":
             bucket["days_absent"] += 1
-        elif status == "duty_leave":
+        elif dominant == "duty_leave":
             bucket["days_duty_leave"] += 1
+        elif dominant == "late":
+            bucket["days_late"] += 1
+        elif dominant == "holiday":
+            bucket["days_holiday"] += 1
+        else:
+            bucket["days_na"] += 1
 
         bucket["total_marked_days"] += 1
-        bucket["entries"].append({"date": date_value, "status": status, "text": text})
+        bucket["entries"].append({
+            "day": day,
+            "day_label": day_th.get_text(" ", strip=True),
+            "summary": dominant,
+            "counts": day_counts,
+            "periods": periods,
+        })
 
-    # Ensure months seen on controls are represented even if no detailed rows were parsed.
-    for control in soup.find_all(["button", "a"]):
-        label = control.get_text(" ", strip=True)
-        month = _extract_month_label(label)
-        if month and month not in months:
-            months[month] = {
-                "month": month,
-                "days_present": 0,
-                "days_absent": 0,
-                "days_duty_leave": 0,
-                "total_marked_days": 0,
-                "entries": [],
-            }
+    bucket["entries"] = sorted(bucket["entries"], key=lambda r: r["day"])
 
     return {
         "etlab_user_id": etlab_user_id,
-        "months": sorted(months.values(), key=lambda r: (r["month"] == "Unknown", r["month"])),
+        "months": [bucket],
         "scraped_at": datetime.utcnow().isoformat(),
     }
