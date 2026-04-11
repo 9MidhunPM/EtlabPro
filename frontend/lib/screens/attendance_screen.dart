@@ -71,11 +71,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
     HapticFeedback.selectionClick();
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(const SnackBar(content: Text('Refreshing attendance...'), duration: Duration(milliseconds: 900)));
-    await data.refreshAttendance(roll);
+    messenger.showSnackBar(const SnackBar(content: Text('Refreshing all data...'), duration: Duration(milliseconds: 900)));
+    await data.refreshEverything(
+      roll,
+      username: auth.username,
+      password: auth.password,
+    );
     if (!mounted) return;
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(const SnackBar(content: Text('Attendance updated'), duration: Duration(milliseconds: 900)));
+    messenger.showSnackBar(const SnackBar(content: Text('All sections refreshed'), duration: Duration(milliseconds: 900)));
   }
 
   Future<void> _loadMonthlyAttendance() async {
@@ -152,12 +156,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     final data = context.watch<StudentData>();
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final topBarBg = isDark ? scheme.primary.withAlpha(42) : scheme.primary.withAlpha(20);
+    final topBarFg = isDark ? scheme.outline : scheme.primary;
 
     return Scaffold(
       body: Column(
         children: [
           Container(
-            color: scheme.primary,
+            decoration: BoxDecoration(
+              color: topBarBg,
+              border: Border(bottom: BorderSide(color: scheme.outline, width: 1.2)),
+            ),
             child: SafeArea(
               bottom: false,
               child: Row(
@@ -165,9 +175,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                   Expanded(
                     child: TabBar(
                       controller: _tabCtrl,
-                      labelColor: scheme.onPrimary,
-                      unselectedLabelColor: scheme.onPrimary.withAlpha(160),
-                      indicatorColor: scheme.onPrimary,
+                      labelColor: topBarFg,
+                      unselectedLabelColor: topBarFg.withAlpha(160),
+                      indicatorColor: scheme.primary,
                       dividerColor: Colors.transparent,
                       tabs: const [Tab(text: 'Attendance'), Tab(text: 'Monthly'), Tab(text: 'Analysis')],
                     ),
@@ -175,7 +185,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                   Padding(
                     padding: const EdgeInsets.only(right: 4),
                     child: IconButton(
-                      icon: Icon(Icons.refresh_rounded, color: scheme.onPrimary),
+                      icon: Icon(Icons.refresh_rounded, color: topBarFg),
                       tooltip: 'Refresh',
                       onPressed: () async {
                         await _refreshAttendanceWithFeedback();

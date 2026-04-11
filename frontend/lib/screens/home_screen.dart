@@ -54,12 +54,21 @@ class _HomeScreenState extends State<HomeScreen> {
     final auth = context.watch<AuthService>();
     final data = context.watch<StudentData>();
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final name = data.summary?['full_name']?.toString() ?? '';
 
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(
+            height: 1,
+            thickness: 1.2,
+            color: isDark ? scheme.outline : const Color(0xFF5A2E91),
+          ),
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -91,8 +100,9 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Refresh all',
             icon: const Icon(Icons.sync_rounded),
             onPressed: () async {
-              final roll = auth.rollNumber;
-              if (roll == null) {
+              final username = auth.username;
+              final password = auth.password;
+              if (username == null || password == null) {
                 ScaffoldMessenger.of(context)
                     .showSnackBar(const SnackBar(content: Text('Session not ready. Please login again.')));
                 return;
@@ -100,8 +110,16 @@ class _HomeScreenState extends State<HomeScreen> {
               HapticFeedback.selectionClick();
               final messenger = ScaffoldMessenger.of(context);
               messenger.hideCurrentSnackBar();
-              messenger.showSnackBar(const SnackBar(content: Text('Refreshing all data...'), duration: Duration(milliseconds: 900)));
-              await data.refreshAll(roll);
+              messenger.showSnackBar(const SnackBar(content: Text('Re-authenticating and refreshing...'), duration: Duration(milliseconds: 1000)));
+              final ok = await auth.login(username, password);
+              if (!ok || !mounted) {
+                messenger.hideCurrentSnackBar();
+                messenger.showSnackBar(const SnackBar(content: Text('Re-login failed. Please sign in again.')));
+                return;
+              }
+              final roll = auth.rollNumber;
+              if (roll == null) return;
+              await data.refreshEverything(roll, username: username, password: password);
               if (!context.mounted) return;
               messenger.hideCurrentSnackBar();
               messenger.showSnackBar(const SnackBar(content: Text('All sections refreshed'), duration: Duration(milliseconds: 900)));
@@ -134,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     final messenger = ScaffoldMessenger.of(context);
                     messenger.hideCurrentSnackBar();
                     messenger.showSnackBar(const SnackBar(content: Text('Refreshing all data...'), duration: Duration(milliseconds: 900)));
-                    await data.refreshAll(roll);
+                    await data.refreshEverything(roll, username: auth.username, password: auth.password);
                     if (!context.mounted) return;
                     messenger.hideCurrentSnackBar();
                     messenger.showSnackBar(const SnackBar(content: Text('All sections refreshed'), duration: Duration(milliseconds: 900)));
@@ -145,16 +163,47 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       DataLoadingCard(data: data),
                       if (data.isLoading || data.loadingSections.isNotEmpty) const SizedBox(height: 12),
-                      NextClassCard(timetable: data.timetable),
+                      _HomeNavCard(
+                        onTap: () => context.go('/timetable'),
+                        child: NextClassCard(timetable: data.timetable),
+                      ),
                       const SizedBox(height: 12),
-                      AttendanceSummaryCard(attendance: data.attendance, syncedAt: data.attendanceSynced),
+                      _HomeNavCard(
+                        onTap: () => context.go('/attendance'),
+                        child: AttendanceSummaryCard(attendance: data.attendance, syncedAt: data.attendanceSynced),
+                      ),
                       const SizedBox(height: 12),
-                      ResultsOverviewCard(marks: data.marks, syncedAt: data.marksSynced),
+                      _HomeNavCard(
+                        onTap: () => context.go('/marks'),
+                        child: ResultsOverviewCard(marks: data.marks, syncedAt: data.marksSynced),
+                      ),
                       const SizedBox(height: 12),
-                      ProfileInfoCard(summary: data.summary),
+                      _HomeNavCard(
+                        onTap: () => context.push('/profile'),
+                        child: ProfileInfoCard(summary: data.summary),
+                      ),
                     ],
                   ),
                 ),
+    );
+  }
+}
+
+class _HomeNavCard extends StatelessWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  const _HomeNavCard({required this.child, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: child,
+      ),
     );
   }
 }

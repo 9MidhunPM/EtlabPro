@@ -63,23 +63,23 @@ class ResultsOverviewCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text('Overall', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
+                Text('Overall', style: TextStyle(fontSize: 11, color: scheme.onSurface, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
                 Text('${overallPct.toStringAsFixed(1)}%', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: perfColor(), height: 1), textAlign: TextAlign.center),
                 const SizedBox(height: 4),
-                Text(perfMsg(), style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
+                Text(perfMsg(), style: TextStyle(fontSize: 12, color: scheme.onSurface), textAlign: TextAlign.center),
                 const SizedBox(height: 2),
-                Text('${sourceMarks.length} exam${sourceMarks.length != 1 ? 's' : ''} (Series 1/2)', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant.withAlpha(160))),
+                Text('${sourceMarks.length} exam${sourceMarks.length != 1 ? 's' : ''} (Series 1/2)', style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(190))),
               ],
             ),
           ),
-          Container(width: 1, height: 80, color: scheme.outlineVariant.withAlpha(80), margin: const EdgeInsets.symmetric(horizontal: 12)),
+          Container(width: 1, height: 80, color: scheme.outline, margin: const EdgeInsets.symmetric(horizontal: 12)),
           Expanded(
             flex: 6,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Needs Attention', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
+                Text('Needs Attention', style: TextStyle(fontSize: 11, color: scheme.onSurface, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
                 ...worst3.map((item) {
                   final r = item['mark'] as Map;

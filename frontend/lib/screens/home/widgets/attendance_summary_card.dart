@@ -72,13 +72,13 @@ class AttendanceSummaryCard extends StatelessWidget {
               ],
             ),
           ),
-          Container(width: 1, height: 90, color: scheme.outlineVariant.withAlpha(80), margin: const EdgeInsets.symmetric(horizontal: 12)),
+          Container(width: 1, height: 90, color: scheme.outline, margin: const EdgeInsets.symmetric(horizontal: 12)),
           Expanded(
             flex: 4,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text('Overall', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
+                Text('Overall', style: TextStyle(fontSize: 11, color: scheme.onSurface, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
                 Text(
                   '${overallPct.toStringAsFixed(1)}%',
@@ -86,9 +86,9 @@ class AttendanceSummaryCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 4),
-                Text(attMsg(), style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant), textAlign: TextAlign.center),
+                Text(attMsg(), style: TextStyle(fontSize: 12, color: scheme.onSurface), textAlign: TextAlign.center),
                 const SizedBox(height: 2),
-                Text('${attendance.length} subjects', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant.withAlpha(160))),
+                Text('${attendance.length} subjects', style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(190))),
               ],
             ),
           ),

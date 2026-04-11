@@ -48,21 +48,21 @@ class ExamGroupCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.primary.withAlpha(30)),
+        border: Border.all(color: scheme.outline),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
             decoration: BoxDecoration(
-              color: scheme.primary,
+              color: scheme.primary.withAlpha(14),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
               children: [
-                Icon(leadingIcon, size: 16, color: scheme.onPrimary),
+                Icon(leadingIcon, size: 16, color: scheme.primary),
                 const SizedBox(width: 8),
-                Text(examLabel, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: scheme.onPrimary, letterSpacing: 0.5)),
+                Text(examLabel, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: scheme.primary, letterSpacing: 0.5)),
               ],
             ),
           ),
@@ -88,7 +88,7 @@ class ExamGroupCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (entry.key < rows.length - 1) Divider(height: 1, indent: 16, endIndent: 16, color: scheme.outlineVariant.withAlpha(80)),
+                if (entry.key < rows.length - 1) Divider(height: 1, indent: 16, endIndent: 16, color: scheme.outline),
               ],
             );
           }),

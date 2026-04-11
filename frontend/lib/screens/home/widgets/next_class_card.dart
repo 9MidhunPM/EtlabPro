@@ -20,9 +20,9 @@ class NextClassCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.primary.withAlpha(30)),
+        border: Border.all(color: scheme.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,25 +30,28 @@ class NextClassCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             decoration: BoxDecoration(
-              color: scheme.primary,
+              color: scheme.primary.withAlpha(14),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
               children: [
-                Icon(Icons.school_rounded, size: 20, color: scheme.onPrimary),
+                Icon(Icons.school_rounded, size: 20, color: scheme.primary),
                 const SizedBox(width: 10),
-                Expanded(child: Text(cardTitle, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: scheme.onPrimary))),
-                Text(info.currentTime, style: TextStyle(fontSize: 12, color: scheme.onPrimary.withAlpha(200), fontWeight: FontWeight.w500)),
+                Expanded(child: Text(cardTitle, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: scheme.primary))),
+                Text(info.currentTime, style: TextStyle(fontSize: 12, color: scheme.primary.withAlpha(190), fontWeight: FontWeight.w600)),
               ],
             ),
           ),
-          Divider(height: 1, color: scheme.primary.withAlpha(180)),
+          Divider(height: 1, color: scheme.outline),
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(child: _pane(scheme, info, left: true)),
-                VerticalDivider(width: 1, color: scheme.outlineVariant.withAlpha(70)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: VerticalDivider(width: 1, color: scheme.outline),
+                ),
                 Expanded(child: _pane(scheme, info, left: false)),
               ],
             ),

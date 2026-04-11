@@ -16,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _userCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool  _obscure  = true;
+  bool _isFetchingData = false;
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
 
@@ -45,10 +46,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
     if (ok && mounted) {
       final roll = auth.rollNumber;
-      context.go('/home');
       if (roll != null) {
-        data.loadAll(roll);
+        setState(() => _isFetchingData = true);
+        await data.loadAll(roll, force: true);
+        if (!mounted) return;
+        setState(() => _isFetchingData = false);
       }
+      if (!mounted) return;
+      context.go('/home');
     }
   }
 
@@ -83,6 +88,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     _AuthErrorBanner(error: auth.error, scheme: scheme),
                     const SizedBox(height: 12),
                     _SubmitButton(isLoading: auth.isLoading, onPressed: _submit),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 220),
+                      child: _isFetchingData
+                          ? Column(
+                              children: const [
+                                SizedBox(height: 10),
+                                LinearProgressIndicator(minHeight: 4),
+                                SizedBox(height: 6),
+                                Text('Fetching your data...', textAlign: TextAlign.center),
+                              ],
+                            )
+                          : const SizedBox.shrink(),
+                    ),
                     const SizedBox(height: 24),
                     const _FooterNote(),
                   ],
@@ -240,7 +258,7 @@ class _FooterNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      'Your credentials are stored securely on your device\nand sent only to the EtlabPro backend.',
+      'WE DO NOT SAVE YOUR ETLAB USERNAME/PASSWORD.\nIT IS SAVED ONLY ON YOUR DEVICE.',
       textAlign: TextAlign.center,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
     );

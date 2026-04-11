@@ -205,7 +205,7 @@ class _OverallCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.primary.withAlpha(20),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: scheme.primary.withAlpha(60)),
+        border: Border.all(color: scheme.outline),
       ),
       child: Column(
         children: [

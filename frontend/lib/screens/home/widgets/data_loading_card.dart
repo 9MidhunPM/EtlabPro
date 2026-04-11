@@ -36,7 +36,7 @@ class DataLoadingCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: scheme.surfaceContainerHighest.withAlpha(110),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: scheme.primary.withAlpha(50)),
+          border: Border.all(color: scheme.outline),
         ),
         child: Column(
           children: [
@@ -58,7 +58,7 @@ class DataLoadingCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: scheme.surface,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: scheme.primary.withAlpha(120)),
+                    border: Border.all(color: scheme.outline),
                   ),
                   alignment: Alignment.center,
                   child: Icon(currentIcon, size: 18, color: scheme.primary),

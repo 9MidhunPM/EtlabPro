@@ -219,6 +219,33 @@ class StudentData extends ChangeNotifier {
     await loadAll(roll, force: true);
   }
 
+  Future<void> refreshEverything(
+    String roll, {
+    String? username,
+    String? password,
+  }) async {
+    await loadAll(roll, force: true);
+
+    String? user = username;
+    String? pass = password;
+    if (user == null || pass == null) {
+      final creds = await _loadStoredCredentials();
+      user = creds?.$1;
+      pass = creds?.$2;
+    }
+    if (user == null || pass == null) return;
+
+    try {
+      await fetchLiveDutyLeaveAttendance(user, pass);
+    } catch (_) {}
+    try {
+      await fetchLiveMonthlyAttendance(username: user, password: pass);
+    } catch (_) {}
+    try {
+      await fetchLiveUpdates(username: user, password: pass);
+    } catch (_) {}
+  }
+
   Future<(String, String)?> _loadStoredCredentials() async {
     final username = await _secureStorage.read(key: AppConstants.kUsername);
     final password = await _secureStorage.read(key: AppConstants.kPassword);

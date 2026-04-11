@@ -77,16 +77,17 @@ class ScreenSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final background = headerColor ?? scheme.primary;
-    final foreground = ThemeData.estimateBrightnessForColor(background) == Brightness.dark
-        ? Colors.white
-        : Colors.black87;
+    final accent = headerColor ?? scheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerBg = Theme.of(context).brightness == Brightness.dark
+        ? scheme.surfaceContainerHighest.withAlpha(70)
+        : accent.withAlpha(14);
 
     return Container(
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor ?? scheme.primary.withAlpha(30)),
+        border: Border.all(color: borderColor ?? scheme.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -94,17 +95,17 @@ class ScreenSectionCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
             decoration: BoxDecoration(
-              color: background,
+              color: headerBg,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
               children: [
-                Icon(icon, size: 18, color: foreground),
+                Icon(icon, size: 18, color: accent),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: foreground),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? scheme.outline : accent),
                   ),
                 ),
                 if (trailing != null) trailing!,

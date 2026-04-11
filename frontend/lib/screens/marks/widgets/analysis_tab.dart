@@ -11,24 +11,26 @@ class MarksAnalysisTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerBg = isDark ? scheme.primary.withAlpha(38) : scheme.primary.withAlpha(14);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       children: [
         Container(
-          decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.primary.withAlpha(30))),
+          decoration: BoxDecoration(color: scheme.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.outline)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 0, 4, 0),
-                decoration: BoxDecoration(color: scheme.primary, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
+                decoration: BoxDecoration(color: headerBg, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
                 child: Row(
                   children: [
-                    Icon(Icons.analytics_rounded, size: 18, color: scheme.onPrimary),
+                    Icon(Icons.analytics_rounded, size: 18, color: scheme.primary),
                     const SizedBox(width: 8),
-                    Expanded(child: Text('Grade Analysis', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: scheme.onPrimary))),
-                    IconButton(icon: Icon(Icons.refresh, size: 20, color: scheme.onPrimary), onPressed: onRefresh),
+                    Expanded(child: Text('Grade Analysis', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? scheme.outline : scheme.primary))),
+                    IconButton(icon: Icon(Icons.refresh, size: 20, color: isDark ? scheme.outline : scheme.primary), onPressed: onRefresh),
                   ],
                 ),
               ),
@@ -40,11 +42,10 @@ class MarksAnalysisTab extends StatelessWidget {
                     Text('Marking Scale:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant)),
                     const SizedBox(height: 4),
                     ...[
-                      '• Regular: CAT-1 & Min CAT-2: /12.5 each, Assignment: /10, Total: /40',
-                      '• 24CSR304: CAT-1 & Min CAT-2: /7.5 each, Assignment: /30, Total: /50',
+                      '• CAT-1 and Min CAT-2 are shown in scaled format',
+                      '• Assignment input is included in total projection',
                       '• Min CAT-2 shows marks needed for 26+ total (red = impossible)',
                       '• Attendance: 90%+=5, 85-89%=4, 80-84%=3, 75-79%=2, 70-74%=1, <70%=0',
-                      '• 24PWT208 is excluded from analysis',
                     ].map((t) => Padding(padding: const EdgeInsets.only(bottom: 2), child: Text(t, style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)))),
                   ],
                 ),
@@ -74,20 +75,20 @@ class _AnalysisTable extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.primary.withAlpha(30))),
+      decoration: BoxDecoration(color: scheme.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.outline)),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-            decoration: BoxDecoration(color: scheme.primary, borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: (Theme.of(context).brightness == Brightness.dark) ? scheme.primary.withAlpha(38) : scheme.primary.withAlpha(14), borderRadius: BorderRadius.circular(8), border: Border.all(color: scheme.outline)),
             child: Row(
               children: [
-                Expanded(flex: 3, child: Text('Subject', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: scheme.onPrimary))),
-                Expanded(flex: 2, child: Text('CAT-1', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: scheme.onPrimary), textAlign: TextAlign.center)),
-                Expanded(flex: 2, child: Text('Min CAT-2', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: scheme.onPrimary), textAlign: TextAlign.center)),
-                Expanded(flex: 2, child: Text('Assign', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: scheme.onPrimary), textAlign: TextAlign.center)),
-                Expanded(flex: 2, child: Text('Attend', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: scheme.onPrimary), textAlign: TextAlign.center)),
-                Expanded(flex: 2, child: Text('Total', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: scheme.onPrimary), textAlign: TextAlign.center)),
+                Expanded(flex: 3, child: Text('Subject', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: scheme.primary))),
+                Expanded(flex: 2, child: Text('CAT-1', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: scheme.primary), textAlign: TextAlign.center)),
+                Expanded(flex: 2, child: Text('Min CAT-2', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: scheme.primary), textAlign: TextAlign.center)),
+                Expanded(flex: 2, child: Text('Assign', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: scheme.primary), textAlign: TextAlign.center)),
+                Expanded(flex: 2, child: Text('Attend', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: scheme.primary), textAlign: TextAlign.center)),
+                Expanded(flex: 2, child: Text('Total', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: scheme.primary), textAlign: TextAlign.center)),
               ],
             ),
           ),
@@ -133,16 +134,17 @@ class _AnalysisTable extends StatelessWidget {
             flex: 2,
             child: Column(children: [
               SizedBox(
-                width: 40,
-                height: 28,
+                width: 44,
+                height: 32,
                 child: TextField(
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
+                  textAlignVertical: TextAlignVertical.center,
                   style: const TextStyle(fontSize: 12),
                   decoration: InputDecoration(
                     hintText: '0',
                     hintStyle: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
-                    contentPadding: EdgeInsets.zero,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: scheme.outlineVariant)),
                     isDense: true,
                   ),

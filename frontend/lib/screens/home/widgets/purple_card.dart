@@ -17,11 +17,13 @@ class PurpleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerBg = isDark ? scheme.primary.withAlpha(38) : scheme.primary.withAlpha(16);
     return Container(
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.primary.withAlpha(30)),
+        border: Border.all(color: scheme.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -29,28 +31,28 @@ class PurpleCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             decoration: BoxDecoration(
-              color: scheme.primary,
+              color: headerBg,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
               children: [
-                Icon(icon, size: 18, color: scheme.onPrimary),
+                Icon(icon, size: 18, color: scheme.primary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: scheme.onPrimary),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? scheme.outline : scheme.primary),
                   ),
                 ),
                 if (subtitle != null)
                   Text(
                     subtitle!,
-                    style: TextStyle(fontSize: 11, color: scheme.onPrimary.withAlpha(200), fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: 11, color: isDark ? scheme.outline.withAlpha(210) : scheme.primary.withAlpha(190), fontWeight: FontWeight.w600),
                   ),
               ],
             ),
           ),
-          Divider(height: 1, color: scheme.primary),
+          Divider(height: 1, color: scheme.outline),
           Padding(padding: const EdgeInsets.all(16), child: child),
         ],
       ),

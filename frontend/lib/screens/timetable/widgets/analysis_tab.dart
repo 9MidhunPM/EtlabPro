@@ -11,6 +11,8 @@ class TimetableAnalysisTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerBg = isDark ? scheme.primary.withAlpha(38) : scheme.primary.withAlpha(14);
     if (slots.isEmpty) {
       return Center(child: Text('No timetable data', style: TextStyle(color: scheme.onSurfaceVariant)));
     }
@@ -22,21 +24,21 @@ class TimetableAnalysisTab extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       children: [
         Container(
-          decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.primary.withAlpha(30))),
+          decoration: BoxDecoration(color: scheme.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.outline)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                 decoration: BoxDecoration(
-                  color: scheme.primary,
+                  color: headerBg,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.analytics_rounded, size: 18, color: scheme.onPrimary),
+                    Icon(Icons.analytics_rounded, size: 18, color: scheme.primary),
                     const SizedBox(width: 8),
-                    Text('Class Analysis', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: scheme.onPrimary)),
+                    Text('Class Analysis', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: isDark ? scheme.outline : scheme.primary)),
                   ],
                 ),
               ),
@@ -50,12 +52,12 @@ class TimetableAnalysisTab extends StatelessWidget {
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                      decoration: BoxDecoration(color: scheme.primary, borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: headerBg, borderRadius: BorderRadius.circular(8)),
                       child: Row(
                         children: [
-                          Expanded(flex: 4, child: Text('Subject', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: scheme.onPrimary))),
-                          Expanded(flex: 2, child: Text('Per Week', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: scheme.onPrimary), textAlign: TextAlign.center)),
-                          Expanded(flex: 2, child: Text('Total Hours', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: scheme.onPrimary), textAlign: TextAlign.center)),
+                          Expanded(flex: 4, child: Text('Subject', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? scheme.outline : scheme.primary))),
+                          Expanded(flex: 2, child: Text('Per Week', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? scheme.outline : scheme.primary), textAlign: TextAlign.center)),
+                          Expanded(flex: 2, child: Text('Total Hours', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? scheme.outline : scheme.primary), textAlign: TextAlign.center)),
                         ],
                       ),
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/student_data.dart';
@@ -26,14 +27,15 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
     final auth = context.read<AuthService>();
     final data = context.read<StudentData>();
 
-    if (auth.username == null || auth.password == null) return;
+    if (auth.username == null || auth.password == null || auth.rollNumber == null) return;
 
     try {
       setState(() {
         _isLoading = true;
         _error = null;
       });
-      await data.fetchLiveUpdates(
+      await data.refreshEverything(
+        auth.rollNumber!,
         username: auth.username!,
         password: auth.password!,
       );
@@ -50,43 +52,51 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
     final scheme = Theme.of(context).colorScheme;
     final updates = data.updates;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Updates'),
-        elevation: 0,
-        actions: [
-          if (!_isLoading)
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _fetchUpdates,
-            ),
-        ],
-      ),
-      body: _isLoading && updates == null
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _fetchUpdates,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_error != null) ...[
-                      ScreenErrorCard(message: _error!),
-                      const SizedBox(height: 16),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (_, __) => context.go('/home'),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Updates'),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+            onPressed: () => context.go('/home'),
+          ),
+          actions: [
+            if (!_isLoading)
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _fetchUpdates,
+              ),
+          ],
+        ),
+        body: _isLoading && updates == null
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _fetchUpdates,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_error != null) ...[
+                        ScreenErrorCard(message: _error!),
+                        const SizedBox(height: 16),
+                      ],
+                      if (updates != null)
+                        UpdatesSections(updates: updates)
+                      else
+                        const ScreenEmptyState(
+                          icon: Icons.notifications_none,
+                          title: 'No updates available',
+                        ),
                     ],
-                    if (updates != null)
-                      UpdatesSections(updates: updates)
-                    else
-                      const ScreenEmptyState(
-                        icon: Icons.notifications_none,
-                        title: 'No updates available',
-                      ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+      ),
     );
   }
 }

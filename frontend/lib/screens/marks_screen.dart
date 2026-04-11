@@ -50,23 +50,21 @@ class _MarksScreenState extends State<MarksScreen> with SingleTickerProviderStat
     HapticFeedback.selectionClick();
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(const SnackBar(content: Text('Refreshing marks...'), duration: Duration(milliseconds: 900)));
-    await data.refreshMarks(roll);
+    messenger.showSnackBar(const SnackBar(content: Text('Refreshing all data...'), duration: Duration(milliseconds: 900)));
+    await data.refreshEverything(
+      roll,
+      username: auth.username,
+      password: auth.password,
+    );
     if (!mounted) return;
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(const SnackBar(content: Text('Marks updated'), duration: Duration(milliseconds: 900)));
+    messenger.showSnackBar(const SnackBar(content: Text('All sections refreshed'), duration: Duration(milliseconds: 900)));
   }
 
   Future<void> _refreshAnalysisWithFeedback() async {
-    HapticFeedback.selectionClick();
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(const SnackBar(content: Text('Refreshing analysis...'), duration: Duration(milliseconds: 900)));
-    _refreshAnalysis();
-    await Future<void>.delayed(const Duration(milliseconds: 120));
+    await _refreshMarksWithFeedback();
     if (!mounted) return;
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(const SnackBar(content: Text('Analysis refreshed'), duration: Duration(milliseconds: 900)));
+    _refreshAnalysis();
   }
 
   static int _examPriority(String key) {
@@ -111,6 +109,9 @@ class _MarksScreenState extends State<MarksScreen> with SingleTickerProviderStat
     final data = context.watch<StudentData>();
     final rows = data.marks;
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final topBarBg = isDark ? scheme.primary.withAlpha(42) : scheme.primary.withAlpha(20);
+    final topBarFg = isDark ? scheme.outline : scheme.primary;
 
     if (_analysisData.isEmpty && rows.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _refreshAnalysis());
@@ -127,7 +128,10 @@ class _MarksScreenState extends State<MarksScreen> with SingleTickerProviderStat
       body: Column(
         children: [
           Container(
-            color: scheme.primary,
+            decoration: BoxDecoration(
+              color: topBarBg,
+              border: Border(bottom: BorderSide(color: scheme.outline, width: 1.2)),
+            ),
             child: SafeArea(
               bottom: false,
               child: Row(
@@ -135,16 +139,16 @@ class _MarksScreenState extends State<MarksScreen> with SingleTickerProviderStat
                   Expanded(
                     child: TabBar(
                       controller: _tabCtrl,
-                      labelColor: scheme.onPrimary,
-                      unselectedLabelColor: scheme.onPrimary.withAlpha(160),
-                      indicatorColor: scheme.onPrimary,
+                      labelColor: topBarFg,
+                      unselectedLabelColor: topBarFg.withAlpha(160),
+                      indicatorColor: scheme.primary,
                       dividerColor: Colors.transparent,
                       tabs: const [Tab(text: 'Results'), Tab(text: 'Analysis')],
                     ),
                   ),
                   IconButton(
                     tooltip: 'Refresh marks',
-                    icon: Icon(Icons.refresh_rounded, color: scheme.onPrimary),
+                    icon: Icon(Icons.refresh_rounded, color: topBarFg),
                     onPressed: _refreshMarksWithFeedback,
                   ),
                 ],

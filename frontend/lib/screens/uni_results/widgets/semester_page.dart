@@ -60,7 +60,7 @@ class UniSemesterPage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (entry.key < rows.length - 1) Divider(height: 1, indent: 16, endIndent: 16, color: scheme.outlineVariant.withAlpha(80)),
+                    if (entry.key < rows.length - 1) Divider(height: 1, indent: 16, endIndent: 16, color: scheme.outline),
                   ],
                 );
               }).toList(),

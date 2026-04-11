@@ -45,11 +45,15 @@ class _TimetableScreenState extends State<TimetableScreen> with SingleTickerProv
     HapticFeedback.selectionClick();
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(const SnackBar(content: Text('Refreshing timetable...'), duration: Duration(milliseconds: 900)));
-    await data.refreshTimetable(roll);
+    messenger.showSnackBar(const SnackBar(content: Text('Refreshing all data...'), duration: Duration(milliseconds: 900)));
+    await data.refreshEverything(
+      roll,
+      username: auth.username,
+      password: auth.password,
+    );
     if (!mounted) return;
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(const SnackBar(content: Text('Timetable updated'), duration: Duration(milliseconds: 900)));
+    messenger.showSnackBar(const SnackBar(content: Text('All sections refreshed'), duration: Duration(milliseconds: 900)));
   }
 
   @override
@@ -57,12 +61,18 @@ class _TimetableScreenState extends State<TimetableScreen> with SingleTickerProv
     final data = context.watch<StudentData>();
     final allSlots = data.timetable;
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final topBarBg = isDark ? scheme.primary.withAlpha(42) : scheme.primary.withAlpha(20);
+    final topBarFg = isDark ? scheme.outline : scheme.primary;
 
     return Scaffold(
       body: Column(
         children: [
           Container(
-            color: scheme.primary,
+            decoration: BoxDecoration(
+              color: topBarBg,
+              border: Border(bottom: BorderSide(color: scheme.outline, width: 1.2)),
+            ),
             child: SafeArea(
               bottom: false,
               child: Row(
@@ -70,16 +80,16 @@ class _TimetableScreenState extends State<TimetableScreen> with SingleTickerProv
                   Expanded(
                     child: TabBar(
                       controller: _tabCtrl,
-                      labelColor: scheme.onPrimary,
-                      unselectedLabelColor: scheme.onPrimary.withAlpha(160),
-                      indicatorColor: scheme.onPrimary,
+                      labelColor: topBarFg,
+                      unselectedLabelColor: topBarFg.withAlpha(160),
+                      indicatorColor: scheme.primary,
                       dividerColor: Colors.transparent,
                       tabs: const [Tab(text: 'Timetable'), Tab(text: 'Analysis')],
                     ),
                   ),
                   IconButton(
                     tooltip: 'Refresh timetable',
-                    icon: Icon(Icons.refresh_rounded, color: scheme.onPrimary),
+                    icon: Icon(Icons.refresh_rounded, color: topBarFg),
                     onPressed: _refreshTimetableWithFeedback,
                   ),
                 ],

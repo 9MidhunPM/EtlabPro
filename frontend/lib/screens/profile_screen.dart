@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../services/student_data.dart';
 import '../widgets/screen_parts.dart';
@@ -10,21 +11,29 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Profile'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Details'),
-              Tab(text: 'My Teachers'),
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (_, __) => context.go('/home'),
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Profile'),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () => context.go('/home'),
+            ),
+            bottom: const TabBar(
+              tabs: [
+                Tab(text: 'Details'),
+                Tab(text: 'My Teachers'),
+              ],
+            ),
+          ),
+          body: const TabBarView(
+            children: [
+              _ProfileDetailsTab(),
+              _MyTeachersTab(),
             ],
           ),
-        ),
-        body: const TabBarView(
-          children: [
-            _ProfileDetailsTab(),
-            _MyTeachersTab(),
-          ],
         ),
       ),
     );
@@ -163,7 +172,7 @@ class _ProfileDetailsTab extends StatelessWidget {
             children: [
               e.value,
               if (e.key < nonEmpty.length - 1)
-                Divider(height: 1, indent: 16, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withAlpha(80)),
+                Divider(height: 1, indent: 16, endIndent: 16, color: Theme.of(context).colorScheme.outline),
             ],
           )).toList(),
         ),
@@ -226,7 +235,7 @@ class _MyTeachersTab extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: scheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: scheme.primary.withAlpha(30)),
+                  border: Border.all(color: scheme.outline),
                 ),
                 child: Row(
                   children: [

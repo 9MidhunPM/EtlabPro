@@ -22,26 +22,28 @@ class AttendanceAnalysisTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerBg = isDark ? scheme.primary.withAlpha(38) : scheme.primary.withAlpha(14);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       children: [
         Container(
-          decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.primary.withAlpha(30))),
+          decoration: BoxDecoration(color: scheme.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.outline)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                 decoration: BoxDecoration(
-                  color: scheme.primary,
+                  color: headerBg,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.analytics_rounded, size: 18, color: scheme.onPrimary),
+                    Icon(Icons.analytics_rounded, size: 18, color: scheme.primary),
                     const SizedBox(width: 8),
-                    Text('Attendance Projections', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: scheme.onPrimary)),
+                    Text('Attendance Projections', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: isDark ? scheme.outline : scheme.primary)),
                   ],
                 ),
               ),
@@ -71,7 +73,18 @@ class AttendanceAnalysisTab extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    SizedBox(width: double.infinity, child: FilledButton(onPressed: onAnalyze, child: const Text('Analyze'))),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: headerBg,
+                          foregroundColor: isDark ? scheme.outline : scheme.primary,
+                          side: BorderSide(color: scheme.outline),
+                        ),
+                        onPressed: onAnalyze,
+                        child: const Text('Analyze'),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -97,14 +110,14 @@ class _ProjectionTable extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.primary.withAlpha(30))),
+      decoration: BoxDecoration(color: scheme.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.outline)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            decoration: BoxDecoration(color: scheme.primary, borderRadius: const BorderRadius.vertical(top: Radius.circular(14))),
-            child: Text('Analysis for: ${DateFormat('dd/MM/yyyy').format(analysis.targetDate)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: scheme.onPrimary)),
+            decoration: BoxDecoration(color: (Theme.of(context).brightness == Brightness.dark) ? scheme.primary.withAlpha(38) : scheme.primary.withAlpha(14), borderRadius: const BorderRadius.vertical(top: Radius.circular(14))),
+            child: Text('Analysis for: ${DateFormat('dd/MM/yyyy').format(analysis.targetDate)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).brightness == Brightness.dark ? scheme.outline : scheme.primary)),
           ),
           const SizedBox(height: 12),
           Container(

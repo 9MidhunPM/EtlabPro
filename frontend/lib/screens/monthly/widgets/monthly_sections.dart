@@ -217,7 +217,7 @@ class MonthlyDayDetailCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: scheme.primary.withAlpha(14),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: scheme.primary.withAlpha(80)),
+                    border: Border.all(color: scheme.outline),
                   ),
                   child: Text(
                     'Holiday',

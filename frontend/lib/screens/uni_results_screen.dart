@@ -68,11 +68,15 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
     HapticFeedback.selectionClick();
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(const SnackBar(content: Text('Refreshing university results...'), duration: Duration(milliseconds: 900)));
-    await data.refreshUniResults(roll);
+    messenger.showSnackBar(const SnackBar(content: Text('Refreshing all data...'), duration: Duration(milliseconds: 900)));
+    await data.refreshEverything(
+      roll,
+      username: auth.username,
+      password: auth.password,
+    );
     if (!mounted) return;
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(const SnackBar(content: Text('University results updated'), duration: Duration(milliseconds: 900)));
+    messenger.showSnackBar(const SnackBar(content: Text('All sections refreshed'), duration: Duration(milliseconds: 900)));
   }
 
   static Color _gradeColor(String? grade) {
@@ -102,6 +106,9 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
     final data = context.watch<StudentData>();
     final rows = data.universityResults;
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final topBarBg = isDark ? scheme.primary.withAlpha(42) : scheme.primary.withAlpha(20);
+    final topBarFg = isDark ? scheme.outline : scheme.primary;
 
     final Map<int, List> groups = {};
     for (final r in rows) {
@@ -126,7 +133,10 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
       body: Column(
         children: [
           Container(
-            color: scheme.primary,
+            decoration: BoxDecoration(
+              color: topBarBg,
+              border: Border(bottom: BorderSide(color: scheme.outline, width: 1.2)),
+            ),
             child: SafeArea(
               bottom: false,
               child: Row(
@@ -136,9 +146,9 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
                       controller: _tabCtrl,
                       isScrollable: true,
                       tabAlignment: TabAlignment.start,
-                      labelColor: scheme.onPrimary,
-                      unselectedLabelColor: scheme.onPrimary.withAlpha(160),
-                      indicatorColor: scheme.onPrimary,
+                      labelColor: topBarFg,
+                      unselectedLabelColor: topBarFg.withAlpha(160),
+                      indicatorColor: scheme.primary,
                       dividerColor: Colors.transparent,
                       tabs: keys
                           .map((k) => Tab(child: Text(_tabLabel(k), style: const TextStyle(fontSize: 12))))
@@ -147,7 +157,7 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
                   ),
                   IconButton(
                     tooltip: 'Refresh results',
-                    icon: Icon(Icons.refresh_rounded, color: scheme.onPrimary),
+                    icon: Icon(Icons.refresh_rounded, color: topBarFg),
                     onPressed: _refreshUniResultsWithFeedback,
                   ),
                 ],
