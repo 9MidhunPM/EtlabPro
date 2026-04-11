@@ -239,10 +239,66 @@ def scrape_attendance_with_duty_leave(session: requests.Session, etlab_user_id: 
     return results
 
 
-def scrape_monthly_attendance(session: requests.Session) -> dict:
+def _get_available_semesters_and_months(soup: BeautifulSoup) -> dict:
+    """
+    Extract available semesters and their available months from the page.
+    
+    Returns:
+        {
+            "current_semester": "4",
+            "available_semesters": ["1", "2", "3", "4"],  # Only those with data
+            "months_by_semester": {
+                "1": ["9", "10", "11", "12"],  # Calendar month numbers
+                "2": ["1", "2", "3", "4"],
+                "3": ["7", "8", "9", "10", "11"],
+                "4": ["12", "1", "2", "3", "4"]
+            }
+        }
+    """
+    sem_select = soup.find("select", id="semester")
+    month_select = soup.find("select", id="month")
+    
+    # Get current semester
+    current_sem = None
+    if sem_select:
+        selected = sem_select.find("option", selected=True)
+        if selected:
+            current_sem = selected.get("value")
+    
+    # For now, store current available months (these change per semester on the form)
+    available_months = []
+    if month_select:
+        for opt in month_select.find_all("option"):
+            available_months.append(opt.get("value"))
+    
+    return {
+        "current_semester": current_sem,
+        "available_months_now": available_months,  # Months for currently selected semester
+    }
+
+
+def scrape_monthly_attendance(
+    session: requests.Session,
+    semester: str | None = None,
+    month: str | None = None,
+    year: str | None = None,
+) -> dict:
     """
     Scrape monthly attendance page and return month-wise day status aggregates.
-    This parser is intentionally resilient because the portal markup changes often.
+    
+    Args:
+        session:   Authenticated requests.Session.
+        semester:  Optional semester value (1-10) to fetch specific semester. If None, uses current/default.
+        month:     Optional month value (calendar month number 1-12) to fetch. If None, uses current/default.
+        year:      Optional year value (e.g., "2025", "2026") to fetch specific year. If None, uses current/default.
+    
+    Returns:
+        Dictionary with month attendance data.
+        
+    Note:
+        Each semester only has certain months available (typically 2-5 months per semester).
+        If an invalid semester/month combination is requested, the ETLAB portal will
+        return the default month for that semester.
     """
     url = _monthly_attendance_url()
     log.info("Scraping monthly attendance page: %s", url)
@@ -254,6 +310,29 @@ def scrape_monthly_attendance(session: requests.Session) -> dict:
     m = re.search(r"/viewattendancesubject/(\d+)", resp.text)
     if m:
         etlab_user_id = m.group(1)
+
+    # Get form details
+    form = soup.find("form")
+    form_action = form.get("action") if form else None
+    form_url = form_action if form_action and form_action.startswith("http") else f"{BASE_URL}{form_action}"
+    
+    # If specific semester/month/year requested, POST to the form with those parameters
+    if semester or month or year:
+        post_data = {}
+        if semester:
+            post_data["semester"] = semester
+            log.info("Requesting semester: %s", semester)
+        if month:
+            post_data["month"] = month
+            log.info("Requesting month: %s", month)
+        if year:
+            post_data["year"] = year
+            log.info("Requesting year: %s", year)
+        
+        if post_data:
+            resp = session.post(form_url, data=post_data, timeout=TIMEOUT)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "lxml")
 
     month_select = soup.find("select", id="month")
     year_select = soup.find("select", id="year")
@@ -382,5 +461,174 @@ def scrape_monthly_attendance(session: requests.Session) -> dict:
     return {
         "etlab_user_id": etlab_user_id,
         "months": [bucket],
+        "scraped_at": datetime.utcnow().isoformat(),
+    }
+
+
+def scrape_monthly_attendance_all_months(
+    session: requests.Session,
+    semesters: list[str] | None = None,
+) -> dict:
+    """
+    Scrape monthly attendance for ALL available months in each semester.
+    Returns historical attendance data for all semesters and their months.
+    
+    Args:
+        session:    Authenticated requests.Session.
+        semesters:  List of semester values (e.g., ["1", "2", "3", "4"]) to scrape.
+                   If None, scrapes 1-4 (the valid semesters).
+    
+    Returns:
+        {
+            "total_months": N,
+            "months": [
+                {
+                    "semester": "Ist Semester",
+                    "semester_value": "1",
+                    "month": "July",
+                    "year": "2025",
+                    "days_present": 25,
+                    "days_absent": 2,
+                    "days_duty_leave": 0,
+                    "total_marked_days": 27,
+                    "display": "Ist Semester - July 2025 (25P, 2A)"
+                },
+                # ... more months
+            ],
+            "scraped_at": "2026-04-11T15:30:45.123456",
+        }
+    """
+    url = _monthly_attendance_url()
+    log.info("Scraping monthly attendance for ALL months across all semesters")
+    
+    if semesters is None:
+        semesters = ["1", "2", "3", "4"]  # Only valid semesters with real data
+    
+    all_months = []
+    
+    for semester in semesters:
+        log.info(f"Fetching semester {semester}...")
+        
+        # First, select the semester to see what months are available
+        resp = session.post(url, data={"semester": semester}, timeout=TIMEOUT)
+        soup = BeautifulSoup(resp.text, "lxml")
+        
+        # Get available months for this semester
+        month_select = soup.find("select", id="month")
+        if not month_select:
+            log.warning(f"No month dropdown found for semester {semester}")
+            continue
+        
+        # Get all available month values for this semester
+        month_options = month_select.find_all("option")
+        available_months = []
+        for opt in month_options:
+            val = opt.get("value")
+            if val:
+                available_months.append({
+                    "value": val,
+                    "label": opt.get_text(strip=True),
+                })
+        
+        log.info(f"Semester {semester}: {len(available_months)} months available")
+        
+        # Fetch data for each month
+        for month_info in available_months:
+            month_val = month_info["value"]
+            month_label = month_info["label"]
+            
+            resp = session.post(
+                url,
+                data={
+                    "semester": semester,
+                    "month": month_val,
+                },
+                timeout=TIMEOUT
+            )
+            
+            soup = BeautifulSoup(resp.text, "lxml")
+            
+            # Extract displayed semester/month/year
+            sem_select = soup.find("select", id="semester")
+            month_select = soup.find("select", id="month")
+            year_select = soup.find("select", id="year")
+            
+            def _get_selected_text(select_elem):
+                if not select_elem:
+                    return None
+                selected = select_elem.find("option", selected=True)
+                if selected:
+                    return selected.get_text(strip=True)
+                # Fallback: get first non-empty option
+                options = select_elem.find_all("option")
+                if options:
+                    return options[0].get_text(strip=True)
+                return None
+            
+            semester_display = _get_selected_text(sem_select) or semester
+            month_display = _get_selected_text(month_select) or month_label
+            year_display = _get_selected_text(year_select) or "Unknown"
+            
+            # Initialize bucket
+            bucket = {
+                "semester": semester_display,
+                "semester_value": semester,
+                "month": month_display,
+                "year": year_display,
+                "days_present": 0,
+                "days_absent": 0,
+                "days_duty_leave": 0,
+                "days_late": 0,
+                "days_holiday": 0,
+                "days_na": 0,
+                "total_marked_days": 0,
+            }
+            
+            # Parse attendance table
+            table = soup.find("table")
+            if table:
+                rows = table.find_all("tr")[1:]
+                for tr in rows:
+                    day_th = tr.find("th")
+                    tds = tr.find_all("td")
+                    if not day_th or not tds:
+                        continue
+                    
+                    day_counts = {"present": 0, "absent": 0, "duty_leave": 0, "late": 0, "holiday": 0, "na": 0}
+                    
+                    for td in tds:
+                        text = td.get_text(" ", strip=True)
+                        status = _canonical_cell_status(td, text)
+                        colspan = int(td.get("colspan", "1") or "1")
+                        day_counts[status] = day_counts.get(status, 0) + max(colspan, 1)
+                    
+                    dominant = max(day_counts, key=lambda k: day_counts.get(k, 0))
+                    if dominant == "present":
+                        bucket["days_present"] += 1
+                    elif dominant == "absent":
+                        bucket["days_absent"] += 1
+                    elif dominant == "duty_leave":
+                        bucket["days_duty_leave"] += 1
+                    elif dominant == "late":
+                        bucket["days_late"] += 1
+                    elif dominant == "holiday":
+                        bucket["days_holiday"] += 1
+                    else:
+                        bucket["days_na"] += 1
+                    
+                    bucket["total_marked_days"] += 1
+            
+            # Add display string
+            bucket["display"] = (
+                f"{semester_display} - {month_display} {year_display or ''} "
+                f"({bucket['days_present']}P, {bucket['days_absent']}A)"
+            ).strip()
+            
+            all_months.append(bucket)
+            log.info(f"  ✓ {bucket['display']}")
+    
+    return {
+        "total_months": len(all_months),
+        "months": all_months,
         "scraped_at": datetime.utcnow().isoformat(),
     }

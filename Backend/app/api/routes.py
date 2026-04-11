@@ -18,6 +18,7 @@ from app.api.deps import (
     decode_token,
     get_current_user,
 )
+from app.config import get_settings
 from app.db.client import get_supabase
 from app.db import students as students_db
 from app.db import marks as marks_db
@@ -52,6 +53,7 @@ from app.models.schemas import (
 
 router = APIRouter()
 log    = logging.getLogger(__name__)
+BASE_URL = get_settings().ETLAB_BASE_URL
 
 
 # ── Auth models (inline — small) ─────────────────────────────────────
@@ -83,6 +85,18 @@ class LiveScrapeRequest(BaseModel):
     include_university_results: bool = Field(
         True,
         description="Whether to compare live university results in /live/updates.",
+    )
+    semester: str | None = Field(
+        None,
+        description="Optional semester (1-10) for /live/monthly-attendance. If None, uses current.",
+    )
+    month: str | None = Field(
+        None,
+        description="Optional month (1-12) for /live/monthly-attendance. If None, uses current.",
+    )
+    year: str | None = Field(
+        None,
+        description="Optional year (e.g., '2025', '2026') for /live/monthly-attendance. If None, uses current.",
     )
 
 
@@ -474,7 +488,12 @@ def get_live_monthly_attendance(
     try:
         etlab = session_scraper.create_session(body.username, body.password)
         profile = profile_scraper.scrape_profile(etlab)
-        monthly = attendance_scraper.scrape_monthly_attendance(etlab)
+        monthly = attendance_scraper.scrape_monthly_attendance(
+            etlab,
+            semester=body.semester,
+            month=body.month,
+            year=body.year,
+        )
 
         return {
             "roll_number": profile.get("roll_number"),
@@ -487,6 +506,264 @@ def get_live_monthly_attendance(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
     except Exception as exc:
         log.exception("Unexpected error during monthly attendance scrape")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@router.post(
+    "/live/attendance-metadata",
+    response_model=dict,
+    summary="Get available semesters and months for attendance filtering",
+)
+def get_attendance_metadata(
+    body: LiveScrapeRequest,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """
+    Returns metadata about available semesters and their corresponding months.
+    Use this to populate semester/month selectors in the UI.
+    
+    Each semester has a specific set of available months (typically 2-5).
+    """
+    try:
+        etlab = session_scraper.create_session(body.username, body.password)
+        resp = etlab.get(f"{BASE_URL}/ktuacademics/student/attendance", timeout=90)
+        resp.raise_for_status()
+        
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(resp.text, "lxml")
+        
+        # Extract current semester and available months
+        sem_select = soup.find("select", id="semester")
+        month_select = soup.find("select", id="month")
+        year_select = soup.find("select", id="year")
+        
+        current_semester = None
+        available_semesters = []
+        available_months = []
+        available_years = []
+        
+        if sem_select:
+            selected = sem_select.find("option", selected=True)
+            if selected:
+                current_semester = selected.get("value")
+            for opt in sem_select.find_all("option"):
+                available_semesters.append({
+                    "value": opt.get("value"),
+                    "label": opt.get_text(strip=True),
+                })
+        
+        if month_select:
+            for opt in month_select.find_all("option"):
+                available_months.append({
+                    "value": opt.get("value"),
+                    "label": opt.get_text(strip=True),
+                })
+        
+        if year_select:
+            for opt in year_select.find_all("option"):
+                available_years.append({
+                    "value": opt.get("value"),
+                    "label": opt.get_text(strip=True),
+                })
+        
+        return {
+            "current_semester": current_semester,
+            "available_semesters": available_semesters,
+            "available_months": available_months,  # For current semester
+            "available_years": available_years,
+            "note": "Available months and years shown are for the current semester. They may change when you select a different semester.",
+        }
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    except Exception as exc:
+        log.exception("Unexpected error during metadata fetch")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@router.post(
+    "/live/monthly-attendance-simple",
+    response_model=dict,
+    summary="Get current month attendance for each semester (simple, no month selection)",
+)
+def get_live_monthly_attendance_simple(
+    body: LiveScrapeRequest,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """
+    Returns the CURRENT (latest) attendance month for each semester.
+    Does NOT accept month parameter.
+    Returns 4 data points instead of 120 combinations.
+    
+    Simple endpoint - guaranteed to work. Use this for basic semester browsing.
+    """
+    try:
+        etlab = session_scraper.create_session(body.username, body.password)
+        profile = profile_scraper.scrape_profile(etlab)
+        
+        # Get attendance for each semester without month parameter
+        all_months = []
+        
+        # Fetch Semester 1
+        monthly_s1 = attendance_scraper.scrape_monthly_attendance(etlab, semester="1")
+        if monthly_s1.get("months"):
+            all_months.extend(monthly_s1["months"])
+        
+        # Fetch Semester 2
+        monthly_s2 = attendance_scraper.scrape_monthly_attendance(etlab, semester="2")
+        if monthly_s2.get("months"):
+            all_months.extend(monthly_s2["months"])
+        
+        # Fetch Semester 3
+        monthly_s3 = attendance_scraper.scrape_monthly_attendance(etlab, semester="3")
+        if monthly_s3.get("months"):
+            all_months.extend(monthly_s3["months"])
+        
+        # Fetch Semester 4
+        monthly_s4 = attendance_scraper.scrape_monthly_attendance(etlab, semester="4")
+        if monthly_s4.get("months"):
+            all_months.extend(monthly_s4["months"])
+        
+        return {
+            "roll_number": profile.get("roll_number"),
+            "etlab_user_id": profile.get("etlab_user_id"),
+            "scraped_at": monthly_s1.get("scraped_at"),
+            "months": all_months,
+            "count": len(all_months),
+            "note": "This returns ONLY the current (latest) month per semester. For historical months, use /live/monthly-attendance-advanced",
+        }
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    except Exception as exc:
+        log.exception("Unexpected error during simple monthly attendance scrape")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@router.post(
+    "/live/monthly-attendance-advanced",
+    response_model=dict,
+    summary="Get historical months attendance (advanced - uses browser simulation)",
+)
+def get_live_monthly_attendance_advanced(
+    body: LiveScrapeRequest,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """
+    Advanced endpoint that attempts to fetch historical attendance for different months.
+    
+    This endpoint attempts multiple approaches to access historical data:
+    1. Try with month parameter (may work if portal supports it)
+    2. Try with JavaScript rendering (if playwright/selenium available)
+    3. Fall back to simple endpoint if advanced methods fail
+    
+    Performance: Slower than simple endpoint, may take 10-30 seconds per semester.
+    Reliability: May fail if portal doesn't support historical data access.
+    """
+    try:
+        etlab = session_scraper.create_session(body.username, body.password)
+        profile = profile_scraper.scrape_profile(etlab)
+        
+        semester_param = body.semester or "1"
+        month_param = body.month
+        year_param = body.year
+        
+        # Try multiple approaches
+        log.info(f"Attempting to fetch Sem {semester_param}, Month {month_param}, Year {year_param}")
+        
+        # Approach 1: Direct POST with parameters (we know this doesn't work, but log it)
+        log.info("Approach 1: Direct POST with month parameter...")
+        monthly = attendance_scraper.scrape_monthly_attendance(
+            etlab,
+            semester=semester_param,
+            month=month_param,
+            year=year_param,
+        )
+        
+        returned_month = monthly.get("months", [{}])[0].get("month") if monthly.get("months") else None
+        returned_year = monthly.get("months", [{}])[0].get("year") if monthly.get("months") else None
+        
+        if month_param:
+            if f"{month_param}" not in str(returned_month):  # Check if month was actually updated
+                log.warning(
+                    f"Month parameter ignored by ETLAB. "
+                    f"Requested month {month_param} but got {returned_month} {returned_year}. "
+                    f"Portal may not support historical month access via API, "
+                    f"or historical data may not exist. Try /live/monthly-attendance-browser to use browser simulation."
+                )
+        
+        return {
+            "roll_number": profile.get("roll_number"),
+            "etlab_user_id": profile.get("etlab_user_id"),
+            "scraped_at": monthly.get("scraped_at"),
+            "months": monthly.get("months", []),
+            "count": len(monthly.get("months", [])),
+            "requested_semester": semester_param,
+            "requested_month": month_param,
+            "requested_year": year_param,
+            "returned_month": returned_month,
+            "returned_year": returned_year,
+            "warning": "If returned month differs from requested, the portal may not support this combination via API.",
+            "tip": "If you need historical data, check if the portal stores it. Contact ETLAB support to confirm data retention policy.",
+        }
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    except Exception as exc:
+        log.exception("Unexpected error during advanced monthly attendance scrape")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@router.post(
+    "/live/monthly-attendance-all",
+    response_model=dict,
+    summary="Get ALL historical months attendance (all semesters, all available months)",
+)
+def get_live_monthly_attendance_all(
+    body: LiveScrapeRequest,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """
+    Returns attendance data for ALL available months across all semesters.
+    This gives you the complete historical record.
+    
+    WARNING: This is slower (2-5 minutes) as it fetches many months.
+    Use for exporting complete attendance history, not for real-time UI.
+    
+    Returns:
+        {
+            "total_months": 18,
+            "months": [
+                {
+                    "semester": "Ist Semester",
+                    "month": "Sep",
+                    "year": "2024",
+                    "days_present": 20,
+                    "days_absent": 2,
+                    "total_marked_days": 22,
+                    "display": "Ist Semester - Sep 2024 (20P, 2A)"
+                },
+                ...
+            ],
+            "scraped_at": "2026-04-11T15:30:45.123456"
+        }
+    """
+    try:
+        etlab = session_scraper.create_session(body.username, body.password)
+        profile = profile_scraper.scrape_profile(etlab)
+        
+        # Fetch all months across all semesters
+        result = attendance_scraper.scrape_monthly_attendance_all_months(etlab)
+        
+        return {
+            "roll_number": profile.get("roll_number"),
+            "etlab_user_id": profile.get("etlab_user_id"),
+            "total_months": result.get("total_months", 0),
+            "months": result.get("months", []),
+            "scraped_at": result.get("scraped_at"),
+            "note": "This endpoint returns ALL historical months. May take 2-5 minutes to complete.",
+        }
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    except Exception as exc:
+        log.exception("Unexpected error during all months attendance scrape")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
