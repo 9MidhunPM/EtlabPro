@@ -35,6 +35,7 @@ Backend/.env
 # ── Scrape output dump (contains student data — never commit) ──────────
 Backend/scrape_output.txt
 scrape_output.txt
+Backend/test/
 
 # ── IDE / Editor ──────────────────────────────────────────────────────
 .idea/
@@ -74,4 +75,4 @@ out/
 *.dll
 
 # ── Old React Native frontend ─────────────────────────────────────────
-frontend OLD IN REACT/
+frontend OLD IN REACT/

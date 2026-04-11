@@ -1,0 +1,11 @@
+.git
+.gitignore
+.vscode
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+*.env
+docs
+scrape_output.txt
