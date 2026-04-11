@@ -62,8 +62,8 @@ class _TimetableScreenState extends State<TimetableScreen> with SingleTickerProv
     final allSlots = data.timetable;
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final topBarBg = isDark ? scheme.primary.withAlpha(42) : scheme.primary.withAlpha(20);
-    final topBarFg = isDark ? scheme.outline : scheme.primary;
+    final topBarBg = isDark ? const Color(0xFF1C1031) : Colors.white;
+    final topBarFg = isDark ? const Color(0xFFD8C9FF) : const Color(0xFF4B2880);
 
     return Scaffold(
       body: Column(
@@ -75,24 +75,13 @@ class _TimetableScreenState extends State<TimetableScreen> with SingleTickerProv
             ),
             child: SafeArea(
               bottom: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TabBar(
-                      controller: _tabCtrl,
-                      labelColor: topBarFg,
-                      unselectedLabelColor: topBarFg.withAlpha(160),
-                      indicatorColor: scheme.primary,
-                      dividerColor: Colors.transparent,
-                      tabs: const [Tab(text: 'Timetable'), Tab(text: 'Analysis')],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Refresh timetable',
-                    icon: Icon(Icons.refresh_rounded, color: topBarFg),
-                    onPressed: _refreshTimetableWithFeedback,
-                  ),
-                ],
+              child: TabBar(
+                controller: _tabCtrl,
+                labelColor: topBarFg,
+                unselectedLabelColor: topBarFg.withAlpha(160),
+                indicatorColor: scheme.primary,
+                dividerColor: Colors.transparent,
+                tabs: const [Tab(text: 'Timetable'), Tab(text: 'Analysis')],
               ),
             ),
           ),
@@ -110,7 +99,12 @@ class _TimetableScreenState extends State<TimetableScreen> with SingleTickerProv
                   onRefresh: _refreshTimetableWithFeedback,
                 ),
                 // Analysis tab
-                TimetableAnalysisTab(slots: allSlots, attendance: data.attendance, marks: data.marks),
+                TimetableAnalysisTab(
+                  slots: allSlots,
+                  attendance: data.attendance,
+                  marks: data.marks,
+                  onRefresh: _refreshTimetableWithFeedback,
+                ),
               ],
             ),
           ),

@@ -55,12 +55,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final data = context.watch<StudentData>();
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final topBarBg = isDark ? const Color(0xFF1C1031) : Colors.white;
+    final topBarFg = isDark ? const Color(0xFFD8C9FF) : const Color(0xFF4B2880);
 
     final name = data.summary?['full_name']?.toString() ?? '';
 
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
+        backgroundColor: topBarBg,
+        foregroundColor: topBarFg,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Divider(
@@ -76,12 +80,12 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(_greeting(),
                 style: TextStyle(
                     fontSize: 12,
-                    color: scheme.onSurface.withAlpha(155),
+                    color: topBarFg.withAlpha(185),
                     fontWeight: FontWeight.normal,
                     height: 1.1)),
             Text(
               name.isNotEmpty ? name : 'EtlabPro',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, height: 1.2),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, height: 1.2, color: topBarFg),
             ),
           ],
         ),
@@ -95,35 +99,6 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Profile',
             icon: const Icon(Icons.person_outline),
             onPressed: () => context.push('/profile'),
-          ),
-          IconButton(
-            tooltip: 'Refresh all',
-            icon: const Icon(Icons.sync_rounded),
-            onPressed: () async {
-              final username = auth.username;
-              final password = auth.password;
-              if (username == null || password == null) {
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(const SnackBar(content: Text('Session not ready. Please login again.')));
-                return;
-              }
-              HapticFeedback.selectionClick();
-              final messenger = ScaffoldMessenger.of(context);
-              messenger.hideCurrentSnackBar();
-              messenger.showSnackBar(const SnackBar(content: Text('Re-authenticating and refreshing...'), duration: Duration(milliseconds: 1000)));
-              final ok = await auth.login(username, password);
-              if (!ok || !mounted) {
-                messenger.hideCurrentSnackBar();
-                messenger.showSnackBar(const SnackBar(content: Text('Re-login failed. Please sign in again.')));
-                return;
-              }
-              final roll = auth.rollNumber;
-              if (roll == null) return;
-              await data.refreshEverything(roll, username: username, password: password);
-              if (!context.mounted) return;
-              messenger.hideCurrentSnackBar();
-              messenger.showSnackBar(const SnackBar(content: Text('All sections refreshed'), duration: Duration(milliseconds: 900)));
-            },
           ),
           IconButton(
             tooltip: 'Logout',

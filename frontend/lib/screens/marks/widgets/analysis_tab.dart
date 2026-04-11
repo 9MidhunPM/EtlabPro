@@ -3,7 +3,7 @@ import '../../../utils/results_analysis.dart';
 
 class MarksAnalysisTab extends StatelessWidget {
   final List<SubjectAnalysis> analysisData;
-  final VoidCallback onRefresh;
+  final Future<void> Function() onRefresh;
   final void Function(int index, double value) onUpdateAssignment;
 
   const MarksAnalysisTab({super.key, required this.analysisData, required this.onRefresh, required this.onUpdateAssignment});
@@ -14,51 +14,55 @@ class MarksAnalysisTab extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final headerBg = isDark ? scheme.primary.withAlpha(38) : scheme.primary.withAlpha(14);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-      children: [
-        Container(
-          decoration: BoxDecoration(color: scheme.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.outline)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 0, 4, 0),
-                decoration: BoxDecoration(color: headerBg, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
-                child: Row(
-                  children: [
-                    Icon(Icons.analytics_rounded, size: 18, color: scheme.primary),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text('Grade Analysis', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? scheme.outline : scheme.primary))),
-                    IconButton(icon: Icon(Icons.refresh, size: 20, color: isDark ? scheme.outline : scheme.primary), onPressed: onRefresh),
-                  ],
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        children: [
+          Container(
+            decoration: BoxDecoration(color: scheme.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.outline)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+                  decoration: BoxDecoration(color: headerBg, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
+                  child: Row(
+                    children: [
+                      Icon(Icons.analytics_rounded, size: 18, color: scheme.primary),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('Grade Analysis', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? scheme.outline : scheme.primary))),
+                    ],
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Marking Scale:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant)),
-                    const SizedBox(height: 4),
-                    ...[
-                      '• CAT-1 and Min CAT-2 are shown in scaled format',
-                      '• Assignment input is included in total projection',
-                      '• Min CAT-2 shows marks needed for 26+ total (red = impossible)',
-                      '• Attendance: 90%+=5, 85-89%=4, 80-84%=3, 75-79%=2, 70-74%=1, <70%=0',
-                    ].map((t) => Padding(padding: const EdgeInsets.only(bottom: 2), child: Text(t, style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)))),
-                  ],
+                Divider(height: 1, thickness: 1.2, color: scheme.outline),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Marking Scale:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant)),
+                      const SizedBox(height: 4),
+                      ...[
+                        '• CAT-1 and Min CAT-2 are shown in scaled format',
+                        '• Assignment input is included in total projection',
+                        '• Min CAT-2 shows marks needed for 26+ total (red = impossible)',
+                        '• Attendance: 90%+=5, 85-89%=4, 80-84%=3, 75-79%=2, 70-74%=1, <70%=0',
+                      ].map((t) => Padding(padding: const EdgeInsets.only(bottom: 2), child: Text(t, style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)))),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        if (analysisData.isEmpty)
-          Center(child: Text('No analysis data. Ensure results and attendance are loaded.', style: TextStyle(color: scheme.onSurfaceVariant)))
-        else
-          _AnalysisTable(analysisData: analysisData, onUpdateAssignment: onUpdateAssignment),
-      ],
+          const SizedBox(height: 16),
+          if (analysisData.isEmpty)
+            Center(child: Text('No analysis data. Ensure results and attendance are loaded.', style: TextStyle(color: scheme.onSurfaceVariant)))
+          else
+            _AnalysisTable(analysisData: analysisData, onUpdateAssignment: onUpdateAssignment),
+        ],
+      ),
     );
   }
 }
@@ -106,7 +110,10 @@ class _AnalysisTable extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-      decoration: BoxDecoration(color: i.isEven ? scheme.surfaceContainerHighest.withAlpha(40) : Colors.transparent),
+      decoration: BoxDecoration(
+        color: i.isEven ? scheme.surfaceContainerHighest.withAlpha(40) : Colors.transparent,
+        border: Border(bottom: BorderSide(color: scheme.outline.withAlpha(170), width: 1)),
+      ),
       child: Row(
         children: [
           Expanded(
@@ -178,7 +185,7 @@ class _AnalysisTable extends StatelessWidget {
       const SizedBox(height: 12),
       Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.red.shade200)),
+        decoration: BoxDecoration(color: scheme.errorContainer.withAlpha(70), borderRadius: BorderRadius.circular(12), border: Border.all(color: scheme.error.withAlpha(110))),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

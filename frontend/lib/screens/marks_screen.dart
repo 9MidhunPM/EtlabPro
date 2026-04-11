@@ -17,6 +17,7 @@ class MarksScreen extends StatefulWidget {
 class _MarksScreenState extends State<MarksScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabCtrl;
   List<SubjectAnalysis> _analysisData = [];
+  bool _analysisQueued = false;
 
   @override
   void initState() {
@@ -110,11 +111,14 @@ class _MarksScreenState extends State<MarksScreen> with SingleTickerProviderStat
     final rows = data.marks;
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final topBarBg = isDark ? scheme.primary.withAlpha(42) : scheme.primary.withAlpha(20);
-    final topBarFg = isDark ? scheme.outline : scheme.primary;
+    final topBarBg = isDark ? const Color(0xFF1C1031) : Colors.white;
+    final topBarFg = isDark ? const Color(0xFFD8C9FF) : const Color(0xFF4B2880);
 
-    if (_analysisData.isEmpty && rows.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _refreshAnalysis());
+    if (!_analysisQueued && _analysisData.isEmpty && rows.isNotEmpty) {
+      _analysisQueued = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _refreshAnalysis();
+      });
     }
 
     final Map<String, List> groups = {};
@@ -134,24 +138,13 @@ class _MarksScreenState extends State<MarksScreen> with SingleTickerProviderStat
             ),
             child: SafeArea(
               bottom: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TabBar(
-                      controller: _tabCtrl,
-                      labelColor: topBarFg,
-                      unselectedLabelColor: topBarFg.withAlpha(160),
-                      indicatorColor: scheme.primary,
-                      dividerColor: Colors.transparent,
-                      tabs: const [Tab(text: 'Results'), Tab(text: 'Analysis')],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Refresh marks',
-                    icon: Icon(Icons.refresh_rounded, color: topBarFg),
-                    onPressed: _refreshMarksWithFeedback,
-                  ),
-                ],
+              child: TabBar(
+                controller: _tabCtrl,
+                labelColor: topBarFg,
+                unselectedLabelColor: topBarFg.withAlpha(160),
+                indicatorColor: scheme.primary,
+                dividerColor: Colors.transparent,
+                tabs: const [Tab(text: 'Results'), Tab(text: 'Analysis')],
               ),
             ),
           ),

@@ -30,7 +30,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 3, vsync: this);
-    _loadMonthlyAttendance();
+    _hydrateMonthlyFromCache();
+    if (_currentMonth == null) {
+      _loadMonthlyAttendance();
+    }
   }
 
   @override
@@ -102,11 +105,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
       );
       final months = (result['months'] as List? ?? []).cast<Map<String, dynamic>>();
       final month = _pickLatestMonth(months);
+      final key = month == null ? null : _monthKey(month);
+      final cachedSelectedDay = key != null && data.monthlySelectedMonthKey == key
+          ? data.monthlySelectedDay
+          : null;
+      final previousSelectedDay = month != null && _currentMonth != null && _monthKey(_currentMonth!) == key
+          ? _selectedDay
+          : null;
+      final resolvedSelectedDay = month == null
+          ? null
+          : _resolveSelectableDay(month, cachedSelectedDay ?? previousSelectedDay);
       if (!mounted) return;
       setState(() {
         _currentMonth = month;
-        _selectedDay = month == null ? null : _firstSelectableDay(month);
+        _selectedDay = resolvedSelectedDay;
       });
+      if (month != null) {
+        data.monthlySelectedMonthKey = key;
+        data.monthlySelectedDay = resolvedSelectedDay;
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _monthlyError = 'Failed to load monthly attendance: $e');
@@ -152,13 +169,51 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
     return (entries.first['day'] as num?)?.toInt() ?? 1;
   }
 
+  void _hydrateMonthlyFromCache() {
+    final data = context.read<StudentData>();
+    if (data.monthlyAttendance.isEmpty) return;
+    final months = data.monthlyAttendance.cast<Map<String, dynamic>>();
+    final month = _pickLatestMonth(List<Map<String, dynamic>>.from(months));
+    if (month == null) return;
+    final key = _monthKey(month);
+    final cachedDay = data.monthlySelectedMonthKey == key ? data.monthlySelectedDay : null;
+    _currentMonth = month;
+    _selectedDay = _resolveSelectableDay(month, cachedDay);
+  }
+
+  String _monthKey(Map<String, dynamic> month) {
+    return '${month['month']}-${month['year']}';
+  }
+
+  int _resolveSelectableDay(Map<String, dynamic> month, int? preferredDay) {
+    final entries = (month['entries'] as List? ?? []).cast<Map<String, dynamic>>();
+    final validDays = entries
+        .map((e) => (e['day'] as num?)?.toInt())
+        .whereType<int>()
+        .toSet();
+    if (preferredDay != null && validDays.contains(preferredDay)) {
+      return preferredDay;
+    }
+    return _firstSelectableDay(month);
+  }
+
+  void _setSelectedDay(int day) {
+    final data = context.read<StudentData>();
+    final month = _currentMonth;
+    setState(() => _selectedDay = day);
+    if (month != null) {
+      data.monthlySelectedMonthKey = _monthKey(month);
+      data.monthlySelectedDay = day;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = context.watch<StudentData>();
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final topBarBg = isDark ? scheme.primary.withAlpha(42) : scheme.primary.withAlpha(20);
-    final topBarFg = isDark ? scheme.outline : scheme.primary;
+    final topBarBg = isDark ? const Color(0xFF1C1031) : Colors.white;
+    final topBarFg = isDark ? const Color(0xFFD8C9FF) : const Color(0xFF4B2880);
 
     return Scaffold(
       body: Column(
@@ -170,30 +225,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
             ),
             child: SafeArea(
               bottom: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TabBar(
-                      controller: _tabCtrl,
-                      labelColor: topBarFg,
-                      unselectedLabelColor: topBarFg.withAlpha(160),
-                      indicatorColor: scheme.primary,
-                      dividerColor: Colors.transparent,
-                      tabs: const [Tab(text: 'Attendance'), Tab(text: 'Monthly'), Tab(text: 'Analysis')],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: IconButton(
-                      icon: Icon(Icons.refresh_rounded, color: topBarFg),
-                      tooltip: 'Refresh',
-                      onPressed: () async {
-                        await _refreshAttendanceWithFeedback();
-                        await _loadMonthlyAttendance();
-                      },
-                    ),
-                  ),
-                ],
+              child: TabBar(
+                controller: _tabCtrl,
+                labelColor: topBarFg,
+                unselectedLabelColor: topBarFg.withAlpha(160),
+                indicatorColor: scheme.primary,
+                dividerColor: Colors.transparent,
+                tabs: const [Tab(text: 'Attendance'), Tab(text: 'Monthly'), Tab(text: 'Analysis')],
               ),
             ),
           ),
@@ -215,6 +253,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                   analysis: _analysis,
                   onPickDate: _pickDate,
                   onAnalyze: _analyze,
+                  onRefresh: () async {
+                    await _refreshAttendanceWithFeedback();
+                    await _loadMonthlyAttendance();
+                  },
                 ),
               ],
             ),
@@ -244,7 +286,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
             MonthlyCalendarCard(
               month: month,
               selectedDay: _selectedDay,
-              onDaySelected: (day) => setState(() => _selectedDay = day),
+              onDaySelected: _setSelectedDay,
             ),
             const SizedBox(height: 16),
             MonthlyDayDetailCard(month: month, selectedDay: _selectedDay),

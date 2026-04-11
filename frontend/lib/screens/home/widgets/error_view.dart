@@ -21,9 +21,8 @@ class HomeErrorView extends StatelessWidget {
             const SizedBox(height: 16),
             Text(error, textAlign: TextAlign.center),
             const SizedBox(height: 24),
-            FilledButton.icon(
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Retry'),
+            FilledButton(
+              child: const Text('Retry'),
               onPressed: () {
                 final roll = auth.rollNumber;
                 if (roll == null) {

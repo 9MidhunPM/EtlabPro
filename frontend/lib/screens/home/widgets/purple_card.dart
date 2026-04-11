@@ -36,18 +36,18 @@ class PurpleCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(icon, size: 18, color: scheme.primary),
+                Icon(icon, size: 18, color: isDark ? const Color(0xFFD8C9FF) : scheme.primary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? scheme.outline : scheme.primary),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? const Color(0xFFD8C9FF) : scheme.primary),
                   ),
                 ),
                 if (subtitle != null)
                   Text(
                     subtitle!,
-                    style: TextStyle(fontSize: 11, color: isDark ? scheme.outline.withAlpha(210) : scheme.primary.withAlpha(190), fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 11, color: isDark ? const Color(0xFFD8C9FF) : scheme.primary.withAlpha(190), fontWeight: FontWeight.w600),
                   ),
               ],
             ),

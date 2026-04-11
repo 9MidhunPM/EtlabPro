@@ -21,6 +21,8 @@ class StudentData extends ChangeNotifier {
   // ── New endpoints data ─────────────────────────────────────────────
   List<dynamic> dutyLeaveAttendance = [];
   List<dynamic> monthlyAttendance = [];
+  int? monthlySelectedDay;
+  String? monthlySelectedMonthKey;
   Map<String, dynamic>? updates;
   Map<String, dynamic>? attendanceMetadata;
 
@@ -360,6 +362,8 @@ class StudentData extends ChangeNotifier {
     profile = summary = shrNumber = null;
     attendance = marks = universityResults = timetable = [];
     dutyLeaveAttendance = monthlyAttendance = [];
+    monthlySelectedDay = null;
+    monthlySelectedMonthKey = null;
     updates = attendanceMetadata = null;
     error = null;
     final prefs = await SharedPreferences.getInstance();

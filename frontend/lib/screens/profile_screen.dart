@@ -1,26 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../services/auth_service.dart';
 import '../services/student_data.dart';
 import '../widgets/screen_parts.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  Future<void> _refreshProfileWithFeedback() async {
+    final data = context.read<StudentData>();
+    final auth = context.read<AuthService>();
+    final roll = auth.rollNumber;
+    if (roll == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Session not ready. Please login again.')));
+      return;
+    }
+
+    HapticFeedback.selectionClick();
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(const SnackBar(content: Text('Refreshing all data...'), duration: Duration(milliseconds: 900)));
+    await data.refreshEverything(
+      roll,
+      username: auth.username,
+      password: auth.password,
+    );
+    if (!mounted) return;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(const SnackBar(content: Text('All sections refreshed'), duration: Duration(milliseconds: 900)));
+  }
 
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
       child: PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (_, __) => context.go('/home'),
+        canPop: true,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) context.go('/home');
+            });
+          }
+        },
         child: Scaffold(
           appBar: AppBar(
-            title: const Text('Profile'),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded),
-              onPressed: () => context.go('/home'),
-            ),
+            automaticallyImplyLeading: false,
+            toolbarHeight: 0,
             bottom: const TabBar(
               tabs: [
                 Tab(text: 'Details'),
@@ -28,10 +62,10 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
-          body: const TabBarView(
+          body: TabBarView(
             children: [
-              _ProfileDetailsTab(),
-              _MyTeachersTab(),
+              _ProfileDetailsTab(onRefresh: _refreshProfileWithFeedback),
+              _MyTeachersTab(onRefresh: _refreshProfileWithFeedback),
             ],
           ),
         ),
@@ -41,7 +75,9 @@ class ProfileScreen extends StatelessWidget {
 }
 
 class _ProfileDetailsTab extends StatelessWidget {
-  const _ProfileDetailsTab();
+  final Future<void> Function() onRefresh;
+
+  const _ProfileDetailsTab({required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -49,47 +85,67 @@ class _ProfileDetailsTab extends StatelessWidget {
     final profile = studentData.profile ?? {};
     final scheme = Theme.of(context).colorScheme;
     final name = profile['full_name'] ?? '—';
-    final shrNo = studentData.shrNumber ?? profile['roll_number'] ?? '';
+    final shrNo = studentData.summary?['roll_number'] ?? studentData.shrNumber ?? profile['roll_number'] ?? '';
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 32),
-      children: [
-        // Avatar header
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [scheme.primary, scheme.primary.withAlpha(180)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            children: [
-              CircleAvatar(
-                radius: 36,
-                backgroundColor: Colors.white.withAlpha(40),
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 32),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: ScreenSectionCard(
+              icon: Icons.badge_outlined,
+              title: 'Student Profile',
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: scheme.primary.withAlpha(18),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: scheme.outline),
+                ),
                 child: Text(
-                  name.isNotEmpty ? name[0].toUpperCase() : '?',
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: scheme.onPrimary),
+                  'SHR: $shrNo',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: scheme.primary),
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(name, style: TextStyle(color: scheme.onPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(
-                '${profile['programme'] ?? ''} • ${profile['department'] ?? ''}',
-                style: TextStyle(color: scheme.onPrimary.withAlpha(200), fontSize: 13),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: scheme.primary.withAlpha(22),
+                    child: Text(
+                      name.toString().isNotEmpty ? name.toString()[0].toUpperCase() : '?',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: scheme.primary),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$name',
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: scheme.onSurface),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${profile['programme'] ?? '—'}',
+                          style: TextStyle(fontSize: 12.5, color: scheme.onSurface),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${profile['department'] ?? '—'}',
+                          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                'SHR No: $shrNo',
-                style: TextStyle(color: scheme.onPrimary.withAlpha(180), fontSize: 12),
-              ),
-            ],
+            ),
           ),
-        ),
         _section(context, 'Personal', Icons.person_outline, [
           _row('Date of Birth', profile['date_of_birth']),
           _row('Gender', profile['gender']),
@@ -154,7 +210,8 @@ class _ProfileDetailsTab extends StatelessWidget {
           _row('Entrance Rank', profile['entrance_rank']),
           _row('Entrance Score', profile['entrance_exam_score']),
         ]),
-      ],
+        ],
+      ),
     );
   }
 
@@ -184,7 +241,9 @@ class _ProfileDetailsTab extends StatelessWidget {
 }
 
 class _MyTeachersTab extends StatelessWidget {
-  const _MyTeachersTab();
+  final Future<void> Function() onRefresh;
+
+  const _MyTeachersTab({required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -209,13 +268,24 @@ class _MyTeachersTab extends StatelessWidget {
     }
 
     if (teacherSubjects.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            Icon(Icons.people_outline, size: 56, color: scheme.onSurfaceVariant.withAlpha(100)),
-            const SizedBox(height: 12),
-            Text('No teachers found', style: TextStyle(color: scheme.onSurfaceVariant)),
+            SizedBox(
+              height: 420,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.people_outline, size: 56, color: scheme.onSurfaceVariant.withAlpha(100)),
+                    const SizedBox(height: 12),
+                    Text('No teachers found', style: TextStyle(color: scheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       );
@@ -223,44 +293,48 @@ class _MyTeachersTab extends StatelessWidget {
 
     final sortedTeachers = teacherSubjects.keys.toList()..sort();
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-      itemCount: sortedTeachers.length,
-      itemBuilder: (context, index) {
-        final teacherName = sortedTeachers[index];
-        final subjects = teacherSubjects[teacherName]!;
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: scheme.outline),
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        itemCount: sortedTeachers.length,
+        itemBuilder: (context, index) {
+          final teacherName = sortedTeachers[index];
+          final subjects = teacherSubjects[teacherName]!;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: scheme.outline),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: scheme.primaryContainer,
+                  child: Text(
+                    teacherName.isNotEmpty ? teacherName[0].toUpperCase() : '?',
+                    style: TextStyle(color: scheme.onPrimaryContainer, fontWeight: FontWeight.bold),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: scheme.primaryContainer,
-                      child: Text(
-                        teacherName.isNotEmpty ? teacherName[0].toUpperCase() : '?',
-                        style: TextStyle(color: scheme.onPrimaryContainer, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(teacherName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                          const SizedBox(height: 4),
-                          Text(subjects, style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
-                        ],
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(teacherName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                      const SizedBox(height: 4),
+                      Text(subjects, style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                    ],
+                  ),
                 ),
-              );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

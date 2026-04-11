@@ -10,6 +10,8 @@ class NextClassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (timetable.isEmpty) return const SizedBox();
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerBg = isDark ? scheme.primary.withAlpha(38) : scheme.primary.withAlpha(14);
     final info = getNextClassInfo(timetable);
 
     final String cardTitle = info.isClassOngoing
@@ -30,19 +32,19 @@ class NextClassCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             decoration: BoxDecoration(
-              color: scheme.primary.withAlpha(14),
+              color: headerBg,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
               children: [
-                Icon(Icons.school_rounded, size: 20, color: scheme.primary),
+                Icon(Icons.school_rounded, size: 20, color: isDark ? const Color(0xFFD8C9FF) : scheme.primary),
                 const SizedBox(width: 10),
-                Expanded(child: Text(cardTitle, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: scheme.primary))),
-                Text(info.currentTime, style: TextStyle(fontSize: 12, color: scheme.primary.withAlpha(190), fontWeight: FontWeight.w600)),
+                Expanded(child: Text(cardTitle, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? const Color(0xFFD8C9FF) : scheme.primary))),
+                Text(info.currentTime, style: TextStyle(fontSize: 12, color: isDark ? const Color(0xFFD8C9FF) : scheme.primary.withAlpha(190), fontWeight: FontWeight.w600)),
               ],
             ),
           ),
-          Divider(height: 1, color: scheme.outline),
+          Divider(height: 1, thickness: 1.2, color: scheme.outline),
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,

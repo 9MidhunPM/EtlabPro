@@ -5,8 +5,9 @@ class TimetableAnalysisTab extends StatelessWidget {
   final List<dynamic> slots;
   final List<dynamic> attendance;
   final List<dynamic>? marks;
+  final Future<void> Function()? onRefresh;
 
-  const TimetableAnalysisTab({super.key, required this.slots, required this.attendance, this.marks});
+  const TimetableAnalysisTab({super.key, required this.slots, required this.attendance, this.marks, this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -20,10 +21,13 @@ class TimetableAnalysisTab extends StatelessWidget {
     final summary = getTimetableSummary(slots, attendance, marks);
     final subjects = summary.weeklyClassesPerSubject.keys.toList();
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-      children: [
-        Container(
+    return RefreshIndicator(
+      onRefresh: onRefresh ?? () async {},
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        children: [
+          Container(
           decoration: BoxDecoration(color: scheme.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.outline)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,8 +93,9 @@ class TimetableAnalysisTab extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }

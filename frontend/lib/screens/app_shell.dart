@@ -14,7 +14,9 @@ class AppShell extends StatelessWidget {
       canPop: navigationShell.currentIndex == 0,
       onPopInvokedWithResult: (_, __) {
         if (navigationShell.currentIndex != 0) {
-          navigationShell.goBranch(0);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            navigationShell.goBranch(0);
+          });
         }
       },
       child: Scaffold(
@@ -44,7 +46,7 @@ class AppShell extends StatelessWidget {
         ),
         bottomNavigationBar: DecoratedBox(
           decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outline, width: 1.2)),
+            border: const Border(top: BorderSide(color: Color(0xFF5A2E91), width: 1.4)),
           ),
           child: NavigationBar(
             selectedIndex: navigationShell.currentIndex,

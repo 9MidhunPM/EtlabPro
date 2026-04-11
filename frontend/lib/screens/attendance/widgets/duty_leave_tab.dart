@@ -28,7 +28,7 @@ class DutyLeaveTab extends StatelessWidget {
             const SizedBox(height: 12),
             Text('No duty leave data available', style: TextStyle(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 16),
-            ElevatedButton.icon(icon: const Icon(Icons.refresh), label: const Text('Fetch Duty Leave'), onPressed: onRefresh),
+            ElevatedButton(onPressed: onRefresh, child: const Text('Fetch Duty Leave')),
           ],
         ),
       );

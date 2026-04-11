@@ -20,12 +20,13 @@ class MonthlyCalendarCard extends StatelessWidget {
     final year = int.tryParse(month['year']?.toString() ?? '') ?? DateTime.now().year;
     final monthIndex = monthNumber(month['month']?.toString());
     final daysInMonth = DateTime(year, monthIndex + 1, 0).day;
-    final firstWeekday = DateTime(year, monthIndex, 1).weekday;
+    // Convert DateTime weekday (Mon=1..Sun=7) to Sunday-first index (Sun=0..Sat=6).
+    final firstWeekday = DateTime(year, monthIndex, 1).weekday % 7;
     final entries = (month['entries'] as List? ?? []).cast<Map<String, dynamic>>();
     final byDay = {for (final entry in entries) (entry['day'] as num?)?.toInt() ?? 0: entry};
 
     final cells = <Widget>[];
-    for (int i = 1; i < firstWeekday; i++) {
+    for (int i = 0; i < firstWeekday; i++) {
       cells.add(const SizedBox.shrink());
     }
 
@@ -44,37 +45,43 @@ class MonthlyCalendarCard extends StatelessWidget {
     return ScreenSectionCard(
       icon: Icons.calendar_month,
       title: 'Calendar View',
+      bodyPadding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       trailing: Text(
         DateFormat('MMMM yyyy').format(DateTime(year, monthIndex)),
-        style: TextStyle(color: scheme.onPrimary.withAlpha(220), fontWeight: FontWeight.w600),
+        style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFD8C9FF) : scheme.primary, fontWeight: FontWeight.w600),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              for (final label in const ['S', 'M', 'T', 'W', 'T', 'F', 'S'])
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        height: 1,
-                        color: scheme.onSurfaceVariant,
+          Padding(
+            padding: const EdgeInsets.only(top: 2, bottom: 2),
+            child: Row(
+              children: [
+                for (final label in const ['S', 'M', 'T', 'W', 'T', 'F', 'S'])
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          height: 1,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 0),
+          const SizedBox(height: 3),
           GridView.count(
             crossAxisCount: 7,
             shrinkWrap: true,
+            primary: false,
+            padding: EdgeInsets.zero,
             physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 0.84,
+            childAspectRatio: 1,
             mainAxisSpacing: 8,
             crossAxisSpacing: 8,
             children: cells,
@@ -100,72 +107,37 @@ class _MonthlyDayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final counts = (entry?['counts'] as Map<String, dynamic>?) ?? {};
     final color = colorForCounts(counts);
     final hasData = entry != null;
-    final hasDetails = (entry?['periods'] as List?)?.isNotEmpty ?? false;
 
     return InkWell(
       onTap: hasData ? onTap : null,
       borderRadius: BorderRadius.circular(14),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: isSelected ? color.withAlpha(40) : color.withAlpha(18),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? color.withAlpha(180) : color.withAlpha(80),
+            color: hasData ? (isSelected ? color.withAlpha(220) : color.withAlpha(140)) : scheme.outline,
             width: isSelected ? 1.6 : 1,
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.topLeft,
-                      child: Text(
-                        '$day',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: hasData ? color : Colors.grey,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (hasDetails) const SizedBox(width: 2),
-                if (hasDetails)
-                  Icon(
-                    isSelected ? Icons.expand_less : Icons.expand_more,
-                    size: 12,
-                    color: color,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Expanded(
-              child: Center(
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: hasData ? color : Colors.grey.shade300,
-                    shape: BoxShape.circle,
-                  ),
-                ),
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '$day',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: hasData ? color : Colors.grey,
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -206,7 +178,7 @@ class MonthlyDayDetailCard extends StatelessWidget {
       child: ScreenSectionCard(
         icon: Icons.today,
         title: '${ordinal(dayNumber)} $monthLabel',
-        headerColor: color,
+        headerColor: Theme.of(context).colorScheme.primary,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -242,9 +214,9 @@ class MonthlyDayDetailCard extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: periodColor.withAlpha(14),
+                    color: scheme.surface,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: periodColor.withAlpha(60)),
+                    border: Border.all(color: scheme.outline),
                   ),
                   child: Row(
                     children: [

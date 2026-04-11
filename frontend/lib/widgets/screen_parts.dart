@@ -79,9 +79,7 @@ class ScreenSectionCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final accent = headerColor ?? scheme.primary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final headerBg = Theme.of(context).brightness == Brightness.dark
-        ? scheme.surfaceContainerHighest.withAlpha(70)
-        : accent.withAlpha(14);
+    final headerBg = isDark ? scheme.primary.withAlpha(38) : accent.withAlpha(14);
 
     return Container(
       decoration: BoxDecoration(
@@ -105,13 +103,14 @@ class ScreenSectionCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? scheme.outline : accent),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? const Color(0xFFD8C9FF) : accent),
                   ),
                 ),
                 if (trailing != null) trailing!,
               ],
             ),
           ),
+          Divider(height: 1, thickness: 1.2, color: scheme.outline),
           Padding(padding: bodyPadding, child: child),
         ],
       ),

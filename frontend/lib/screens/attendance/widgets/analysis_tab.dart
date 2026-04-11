@@ -9,6 +9,7 @@ class AttendanceAnalysisTab extends StatelessWidget {
   final AttendanceAnalysis? analysis;
   final VoidCallback onPickDate;
   final VoidCallback onAnalyze;
+  final Future<void> Function()? onRefresh;
 
   const AttendanceAnalysisTab({
     super.key,
@@ -17,6 +18,7 @@ class AttendanceAnalysisTab extends StatelessWidget {
     required this.analysis,
     required this.onPickDate,
     required this.onAnalyze,
+    this.onRefresh,
   });
 
   @override
@@ -25,10 +27,13 @@ class AttendanceAnalysisTab extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final headerBg = isDark ? scheme.primary.withAlpha(38) : scheme.primary.withAlpha(14);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-      children: [
-        Container(
+    return RefreshIndicator(
+      onRefresh: onRefresh ?? () async {},
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        children: [
+          Container(
           decoration: BoxDecoration(color: scheme.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: scheme.outline)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,6 +52,7 @@ class AttendanceAnalysisTab extends StatelessWidget {
                   ],
                 ),
               ),
+              Divider(height: 1, thickness: 1.2, color: scheme.outline),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -91,11 +97,12 @@ class AttendanceAnalysisTab extends StatelessWidget {
             ],
           ),
         ),
-        if (analysis != null) ...[
-          const SizedBox(height: 16),
-          _ProjectionTable(analysis: analysis!),
+          if (analysis != null) ...[
+            const SizedBox(height: 16),
+            _ProjectionTable(analysis: analysis!),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -145,7 +152,10 @@ class _ProjectionTable extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-      decoration: BoxDecoration(color: i.isEven ? scheme.surfaceContainerHighest.withAlpha(40) : Colors.transparent),
+      decoration: BoxDecoration(
+        color: i.isEven ? scheme.surfaceContainerHighest.withAlpha(40) : Colors.transparent,
+        border: Border(bottom: BorderSide(color: scheme.outline.withAlpha(170), width: 1)),
+      ),
       child: Row(
         children: [
           Expanded(

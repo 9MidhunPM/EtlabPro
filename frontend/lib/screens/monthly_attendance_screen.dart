@@ -103,12 +103,6 @@ class _MonthlyAttendanceScreenState extends State<MonthlyAttendanceScreen> {
       appBar: AppBar(
         title: const Text('Monthly Attendance'),
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _isLoading ? null : _loadCurrentMonth,
-          ),
-        ],
       ),
       body: _isLoading && month == null
           ? const Center(child: CircularProgressIndicator())

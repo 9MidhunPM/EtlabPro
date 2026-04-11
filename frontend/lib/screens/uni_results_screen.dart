@@ -107,8 +107,8 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
     final rows = data.universityResults;
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final topBarBg = isDark ? scheme.primary.withAlpha(42) : scheme.primary.withAlpha(20);
-    final topBarFg = isDark ? scheme.outline : scheme.primary;
+    final topBarBg = isDark ? const Color(0xFF1C1031) : Colors.white;
+    final topBarFg = isDark ? const Color(0xFFD8C9FF) : const Color(0xFF4B2880);
 
     final Map<int, List> groups = {};
     for (final r in rows) {
@@ -139,28 +139,16 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
             ),
             child: SafeArea(
               bottom: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TabBar(
-                      controller: _tabCtrl,
-                      isScrollable: true,
-                      tabAlignment: TabAlignment.start,
-                      labelColor: topBarFg,
-                      unselectedLabelColor: topBarFg.withAlpha(160),
-                      indicatorColor: scheme.primary,
-                      dividerColor: Colors.transparent,
-                      tabs: keys
-                          .map((k) => Tab(child: Text(_tabLabel(k), style: const TextStyle(fontSize: 12))))
-                          .toList(),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Refresh results',
-                    icon: Icon(Icons.refresh_rounded, color: topBarFg),
-                    onPressed: _refreshUniResultsWithFeedback,
-                  ),
-                ],
+              child: TabBar(
+                controller: _tabCtrl,
+                isScrollable: false,
+                labelColor: topBarFg,
+                unselectedLabelColor: topBarFg.withAlpha(160),
+                indicatorColor: scheme.primary,
+                dividerColor: Colors.transparent,
+                tabs: keys
+                    .map((k) => Tab(child: Text(_tabLabel(k), style: const TextStyle(fontSize: 12))))
+                    .toList(),
               ),
             ),
           ),

@@ -199,11 +199,13 @@ class _OverallCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerBg = isDark ? scheme.primary.withAlpha(38) : scheme.primary.withAlpha(20);
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: scheme.primary.withAlpha(20),
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: scheme.outline),
       ),
@@ -214,20 +216,20 @@ class _OverallCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.insights_rounded, color: scheme.primary, size: 20),
+                  Icon(Icons.insights_rounded, color: isDark ? const Color(0xFFD8C9FF) : scheme.primary, size: 20),
                   const SizedBox(width: 8),
-                  Text('Attendance Snapshot', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: scheme.primary)),
+                  Text('Attendance Snapshot', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? const Color(0xFFD8C9FF) : scheme.primary)),
                 ],
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(color: scheme.primaryContainer, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(color: headerBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: scheme.outline)),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.military_tech_rounded, size: 14),
+                    Icon(Icons.military_tech_rounded, size: 14, color: isDark ? const Color(0xFFD8C9FF) : scheme.primary),
                     const SizedBox(width: 4),
-                    Text(markBand, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: scheme.onPrimaryContainer)),
+                    Text(markBand, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isDark ? const Color(0xFFD8C9FF) : scheme.primary)),
                   ],
                 ),
               ),
@@ -273,7 +275,7 @@ class _OverallCard extends StatelessWidget {
                             Icon(Icons.fact_check_rounded, color: scheme.primary, size: 24),
                             const SizedBox(height: 4),
                             Text('${overall.toStringAsFixed(1)}%', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: scheme.primary)),
-                            Text('Total', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+                            Text('Total', style: TextStyle(fontSize: 11, color: scheme.onSurface)),
                           ],
                         ),
                       ],

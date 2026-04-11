@@ -53,23 +53,28 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
     final updates = data.updates;
 
     return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (_, __) => context.go('/home'),
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) context.go('/home');
+          });
+        }
+      },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Updates'),
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            onPressed: () => context.go('/home'),
+            onPressed: () {
+              if (Navigator.of(context).canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
           ),
-          actions: [
-            if (!_isLoading)
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _fetchUpdates,
-              ),
-          ],
         ),
         body: _isLoading && updates == null
             ? const Center(child: CircularProgressIndicator())

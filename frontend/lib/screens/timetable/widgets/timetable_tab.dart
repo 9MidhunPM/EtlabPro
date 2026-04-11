@@ -101,8 +101,9 @@ class SlotCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: isFree ? scheme.surfaceContainerHighest.withAlpha(80) : scheme.surfaceContainerLow,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outline),
       ),
       child: Row(
         children: [
@@ -114,21 +115,21 @@ class SlotCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             alignment: Alignment.center,
-            child: Text('$period', style: TextStyle(fontWeight: FontWeight.bold, color: isFree ? scheme.onSurfaceVariant : scheme.onPrimaryContainer)),
+            child: Text('$period', style: TextStyle(fontWeight: FontWeight.bold, color: isFree ? scheme.onSurface : scheme.onPrimaryContainer)),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: TextStyle(fontWeight: FontWeight.w600, color: isFree ? scheme.onSurfaceVariant : scheme.onSurface)),
-                if (!isFree && code.isNotEmpty) Text(code, style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
-                if (!isFree && teacher.isNotEmpty) Text(teacher, style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
-                if (classType.isNotEmpty) Text(classType, style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant.withAlpha(150))),
+                Text(name, style: TextStyle(fontWeight: FontWeight.w600, color: isFree ? scheme.onSurface : scheme.onSurface)),
+                if (!isFree && code.isNotEmpty) Text(code, style: TextStyle(fontSize: 12, color: scheme.onSurface)),
+                if (!isFree && teacher.isNotEmpty) Text(teacher, style: TextStyle(fontSize: 12, color: scheme.onSurface)),
+                if (classType.isNotEmpty) Text(classType, style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(160))),
               ],
             ),
           ),
-          if (time.isNotEmpty) Text(time, style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+          if (time.isNotEmpty) Text(time, style: TextStyle(fontSize: 11, color: scheme.onSurface)),
         ],
       ),
     );

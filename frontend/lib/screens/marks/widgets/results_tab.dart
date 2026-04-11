@@ -43,10 +43,12 @@ class ExamGroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final leadingIcon = _examIcon(examLabel);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final headerBg = isDark ? scheme.primary.withAlpha(38) : scheme.primary.withAlpha(14);
     return Container(
       margin: const EdgeInsets.only(top: 12),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: scheme.outline),
       ),
@@ -55,17 +57,18 @@ class ExamGroupCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
             decoration: BoxDecoration(
-              color: scheme.primary.withAlpha(14),
+              color: headerBg,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
               children: [
-                Icon(leadingIcon, size: 16, color: scheme.primary),
+                Icon(leadingIcon, size: 16, color: isDark ? const Color(0xFFD8C9FF) : scheme.primary),
                 const SizedBox(width: 8),
-                Text(examLabel, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: scheme.primary, letterSpacing: 0.5)),
+                Text(examLabel, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: isDark ? const Color(0xFFD8C9FF) : scheme.primary, letterSpacing: 0.5)),
               ],
             ),
           ),
+          Divider(height: 1, thickness: 1.2, color: scheme.outline),
           ...rows.asMap().entries.map((entry) {
             final r = entry.value;
             final obtained = r['marks_obtained'];
@@ -84,11 +87,11 @@ class ExamGroupCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(obtained != null ? '$obtained / $max' : '—', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: isLow ? scheme.error : scheme.onSurface)),
-                      if (pct != null) Text('${pct.toStringAsFixed(0)}%', style: TextStyle(fontSize: 12, color: isLow ? scheme.error : scheme.onSurfaceVariant)),
+                      if (pct != null) Text('${pct.toStringAsFixed(0)}%', style: TextStyle(fontSize: 12, color: isLow ? scheme.error : scheme.onSurface)),
                     ],
                   ),
                 ),
-                if (entry.key < rows.length - 1) Divider(height: 1, indent: 16, endIndent: 16, color: scheme.outline),
+                if (entry.key < rows.length - 1) Divider(height: 1, thickness: 1.1, indent: 16, endIndent: 16, color: scheme.outline),
               ],
             );
           }),
