@@ -801,7 +801,7 @@ def get_live_updates(
         prev_marks = marks_db.get_marks(sb, student_id)
         prev_university = uni_db.get_university_results(sb, student_id)
 
-        live_attendance = attendance_scraper.scrape_attendance_with_duty_leave(etlab, etlab_user_id)
+        live_attendance = attendance_scraper.scrape_attendance(etlab, etlab_user_id)
         live_marks = marks_scraper.scrape_marks(etlab)
         live_university = uni_scraper.scrape_university_results(etlab) if body.include_university_results else []
 

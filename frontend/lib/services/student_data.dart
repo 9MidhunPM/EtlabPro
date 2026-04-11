@@ -245,9 +245,25 @@ class StudentData extends ChangeNotifier {
         'month': month,
         'year': year,
       });
-      monthlyAttendance = (result as Map)['months'] as List? ?? [];
+
+      final typed = result as Map<String, dynamic>;
+      List<dynamic> months = typed['months'] as List? ?? [];
+
+      // Fallback: if requested combo has no rows, show simple endpoint data.
+      if (months.isEmpty) {
+        final simple = await ApiClient.instance.post('/live/monthly-attendance-simple', {
+          'username': username,
+          'password': password,
+        }) as Map<String, dynamic>;
+        months = simple['months'] as List? ?? [];
+        monthlyAttendance = months;
+        notifyListeners();
+        return simple;
+      }
+
+      monthlyAttendance = months;
       notifyListeners();
-      return result as Map<String, dynamic>;
+      return typed;
     } catch (e) {
       error = e.toString();
       notifyListeners();

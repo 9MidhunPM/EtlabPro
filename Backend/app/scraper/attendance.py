@@ -40,6 +40,33 @@ def _monthly_attendance_url() -> str:
     return f"{BASE_URL}/ktuacademics/student/attendance"
 
 
+def _resolve_form_url(form_action: str | None, fallback_url: str) -> str:
+    if not form_action:
+        return fallback_url
+    action = form_action.strip()
+    if action.startswith("http://") or action.startswith("https://"):
+        return action
+    return f"{BASE_URL}/{action.lstrip('/')}"
+
+
+def _find_monthly_attendance_table(soup: BeautifulSoup):
+    """
+    Pick the actual day-wise attendance matrix table.
+    The page can contain multiple tables (legends/summary), so a plain find("table")
+    often returns the wrong one and yields empty data.
+    """
+    for table in soup.find_all("table"):
+        rows = table.find_all("tr")
+        for tr in rows:
+            day_th = tr.find("th")
+            tds = tr.find_all("td")
+            if not day_th or not tds:
+                continue
+            if re.search(r"\b\d{1,2}\b", day_th.get_text(" ", strip=True)):
+                return table
+    return None
+
+
 def _extract_attendance_metrics(cell_val: str) -> tuple[int, int, float, int | None]:
     """
     Parse attendance metrics from flexible cell formats.
@@ -311,22 +338,40 @@ def scrape_monthly_attendance(
     if m:
         etlab_user_id = m.group(1)
 
-    # Get form details
+    # Get form details and preserve hidden fields (csrf token, etc.) for POST requests.
     form = soup.find("form")
     form_action = form.get("action") if form else None
-    form_url = form_action if form_action and form_action.startswith("http") else f"{BASE_URL}{form_action}"
+    form_url = _resolve_form_url(form_action, url)
+
+    sem_select = soup.find("select", id="semester")
+    month_select = soup.find("select", id="month")
+    year_select = soup.find("select", id="year")
+
+    sem_field_name = sem_select.get("name") if sem_select else "semester"
+    month_field_name = month_select.get("name") if month_select else "month"
+    year_field_name = year_select.get("name") if year_select else "year"
+
+    base_post_data: dict[str, str] = {}
+    if form:
+        for inp in form.find_all("input"):
+            name = inp.get("name")
+            if not name:
+                continue
+            in_type = (inp.get("type") or "").lower()
+            if in_type in {"hidden", "submit"}:
+                base_post_data[name] = inp.get("value") or ""
     
     # If specific semester/month/year requested, POST to the form with those parameters
     if semester or month or year:
-        post_data = {}
+        post_data = dict(base_post_data)
         if semester:
-            post_data["semester"] = semester
+            post_data[sem_field_name] = semester
             log.info("Requesting semester: %s", semester)
         if month:
-            post_data["month"] = month
+            post_data[month_field_name] = month
             log.info("Requesting month: %s", month)
         if year:
-            post_data["year"] = year
+            post_data[year_field_name] = year
             log.info("Requesting year: %s", year)
         
         if post_data:
@@ -379,7 +424,7 @@ def scrape_monthly_attendance(
         "entries": [],
     }
 
-    table = soup.find("table")
+    table = _find_monthly_attendance_table(soup)
     if not table:
         return {
             "etlab_user_id": etlab_user_id,
@@ -509,8 +554,32 @@ def scrape_monthly_attendance_all_months(
     for semester in semesters:
         log.info(f"Fetching semester {semester}...")
         
-        # First, select the semester to see what months are available
-        resp = session.post(url, data={"semester": semester}, timeout=TIMEOUT)
+        # First, select the semester to see what months are available.
+        # Include hidden form fields to keep the portal state machine intact.
+        first_page = session.get(url, timeout=TIMEOUT)
+        first_page.raise_for_status()
+        first_soup = BeautifulSoup(first_page.text, "lxml")
+
+        form = first_soup.find("form")
+        sem_select_initial = first_soup.find("select", id="semester")
+        month_select_initial = first_soup.find("select", id="month")
+        year_select_initial = first_soup.find("select", id="year")
+
+        sem_field_name = sem_select_initial.get("name") if sem_select_initial else "semester"
+        month_field_name = month_select_initial.get("name") if month_select_initial else "month"
+        year_field_name = year_select_initial.get("name") if year_select_initial else "year"
+
+        base_post_data: dict[str, str] = {}
+        if form:
+            for inp in form.find_all("input"):
+                name = inp.get("name")
+                if not name:
+                    continue
+                in_type = (inp.get("type") or "").lower()
+                if in_type in {"hidden", "submit"}:
+                    base_post_data[name] = inp.get("value") or ""
+
+        resp = session.post(url, data={**base_post_data, sem_field_name: semester}, timeout=TIMEOUT)
         soup = BeautifulSoup(resp.text, "lxml")
         
         # Get available months for this semester
@@ -540,8 +609,9 @@ def scrape_monthly_attendance_all_months(
             resp = session.post(
                 url,
                 data={
-                    "semester": semester,
-                    "month": month_val,
+                    **base_post_data,
+                    sem_field_name: semester,
+                    month_field_name: month_val,
                 },
                 timeout=TIMEOUT
             )
@@ -585,7 +655,7 @@ def scrape_monthly_attendance_all_months(
             }
             
             # Parse attendance table
-            table = soup.find("table")
+            table = _find_monthly_attendance_table(soup)
             if table:
                 rows = table.find_all("tr")[1:]
                 for tr in rows:
