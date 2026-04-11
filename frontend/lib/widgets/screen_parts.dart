@@ -80,7 +80,7 @@ class ScreenSectionCard extends StatelessWidget {
     final background = headerColor ?? scheme.primary;
     final foreground = ThemeData.estimateBrightnessForColor(background) == Brightness.dark
         ? Colors.white
-        : Colors.white;
+        : Colors.black87;
 
     return Container(
       decoration: BoxDecoration(

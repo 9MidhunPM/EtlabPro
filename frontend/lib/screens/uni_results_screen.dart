@@ -17,8 +17,6 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
   TabController? _tabCtrl;
   List<int> _semesterKeys = [];
 
-  static const _ordinal = ['Ist', 'IInd', 'IIIrd', 'IVth', 'Vth', 'VIth', 'VIIth', 'VIIIth'];
-
   static int _extractSemester(dynamic row) {
     final semesterField = (row['semester'] ?? '').toString().toLowerCase();
     final labelField = (row['semester_label'] ?? row['exam_name'] ?? '').toString().toLowerCase();
@@ -39,7 +37,7 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
 
   static String _tabLabel(int semesterKey) {
     if (semesterKey >= 1 && semesterKey <= 8) {
-      return '${_ordinal[semesterKey - 1]} Semester';
+      return 'Semester - $semesterKey';
     }
     return 'Other';
   }
@@ -79,11 +77,19 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
 
   static Color _gradeColor(String? grade) {
     final g = grade?.toUpperCase() ?? '';
-    if (['S', 'A+', 'A'].contains(g)) return Colors.green.shade600;
-    if (['B+', 'B', 'B-'].contains(g)) return Colors.blue.shade600;
-    if (['C+', 'C', 'C-'].contains(g)) return Colors.amber.shade700;
-    if (['D+', 'D', 'F'].contains(g)) return Colors.red.shade600;
-    if (g == 'P') return Colors.purple.shade600;
+    if (g == 'S') return Colors.teal.shade500;
+    if (g == 'A+') return Colors.green.shade600;
+    if (g == 'A') return Colors.lightGreen.shade700;
+    if (g == 'B+') return Colors.blue.shade500;
+    if (g == 'B') return Colors.blue.shade700;
+    if (g == 'B-') return Colors.indigo.shade500;
+    if (g == 'C+') return Colors.orange.shade500;
+    if (g == 'C') return Colors.orange.shade700;
+    if (g == 'C-') return Colors.deepOrange.shade600;
+    if (g == 'D+') return Colors.pink.shade400;
+    if (g == 'D') return Colors.red.shade500;
+    if (g == 'F') return Colors.red.shade800;
+    if (g == 'P') return Colors.deepPurple.shade500;
     return Colors.grey;
   }
 

@@ -31,10 +31,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _autoFetchDutyLeave());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autoFetchLiveExtras());
   }
 
-  Future<void> _autoFetchDutyLeave() async {
+  Future<void> _autoFetchLiveExtras() async {
     if (!mounted) return;
     final auth = context.read<AuthService>();
     final data = context.read<StudentData>();
@@ -43,6 +43,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (username == null || password == null) return;
     try {
       await data.fetchLiveDutyLeaveAttendance(username, password);
+    } catch (_) {}
+    try {
+      await data.fetchLiveMonthlyAttendance(username: username, password: password);
     } catch (_) {}
   }
 
