@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/student_data.dart';
+import 'uni_results/widgets/semester_page.dart';
+import '../widgets/screen_parts.dart';
 
 class UniResultsScreen extends StatefulWidget {
   const UniResultsScreen({super.key});
@@ -105,16 +107,10 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
 
     if (rows.isEmpty || _tabCtrl == null) {
       return Scaffold(
-        body: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.school_outlined, size: 56, color: scheme.onSurfaceVariant.withAlpha(100)),
-                const SizedBox(height: 12),
-                Text('No university results', style: TextStyle(color: scheme.onSurfaceVariant)),
-              ],
-            ),
+        body: const SafeArea(
+          child: ScreenEmptyState(
+            icon: Icons.school_outlined,
+            title: 'No university results',
           ),
         ),
       );
@@ -156,7 +152,7 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
             child: TabBarView(
               controller: _tabCtrl!,
               children: keys
-                  .map((k) => _SemesterPage(
+                  .map((k) => UniSemesterPage(
                         rows: groups[k]!,
                         gradeColor: _gradeColor,
                         statusColor: _statusColor,
@@ -167,100 +163,6 @@ class _UniResultsScreenState extends State<UniResultsScreen> with TickerProvider
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SemesterPage extends StatelessWidget {
-  final List rows;
-  final Color Function(String?) gradeColor;
-  final Color Function(String?) statusColor;
-  final Future<void> Function()? onRefresh;
-  const _SemesterPage({required this.rows, required this.gradeColor, required this.statusColor, this.onRefresh});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final sgpa = rows.isNotEmpty ? rows.last['sgpa'] : null;
-    final cgpa = rows.isNotEmpty ? rows.last['cgpa'] : null;
-
-    return RefreshIndicator(
-      onRefresh: onRefresh ?? () async {},
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: [
-        if (sgpa != null || cgpa != null) ...[
-          Row(
-            children: [
-              if (sgpa != null) _Chip('SGPA ${(sgpa as num).toStringAsFixed(2)}', scheme.primaryContainer, scheme.onPrimaryContainer),
-              if (sgpa != null && cgpa != null) const SizedBox(width: 8),
-              if (cgpa != null) _Chip('CGPA ${(cgpa as num).toStringAsFixed(2)}', scheme.secondaryContainer, scheme.onSecondaryContainer),
-            ],
-          ),
-          const SizedBox(height: 12),
-        ],
-        Container(
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: scheme.primary.withAlpha(30)),
-          ),
-          child: Column(
-            children: rows.asMap().entries.map((entry) {
-              final r = entry.value;
-              final grade = r['grade'] ?? '—';
-              final rawStatus = (r['result_status'] ?? '').toString();
-              final status = rawStatus.toLowerCase() == 'pending' ? '' : rawStatus;
-              final credit = r['credit'];
-              final slot = r['slot'] ?? '';
-              final gc = gradeColor(grade);
-              final sc = statusColor(status);
-
-              return Column(
-                children: [
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                    title: Text(r['raw_subject_name'] ?? r['subject_code'] ?? '—',
-                        style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                    subtitle: Text(
-                      '${r['subject_code'] ?? ''}${slot.toString().isNotEmpty ? '  •  $slot' : ''}${credit != null ? '  •  $credit cr' : ''}',
-                      style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
-                    ),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(grade, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: gc)),
-                        Text(status, style: TextStyle(fontSize: 11, color: sc)),
-                      ],
-                    ),
-                  ),
-                  if (entry.key < rows.length - 1)
-                    Divider(height: 1, indent: 16, endIndent: 16, color: scheme.outlineVariant.withAlpha(80)),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  final String text;
-  final Color bg, fg;
-  const _Chip(this.text, this.bg, this.fg);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: Text(text, style: TextStyle(fontSize: 11, color: fg, fontWeight: FontWeight.w500)),
     );
   }
 }

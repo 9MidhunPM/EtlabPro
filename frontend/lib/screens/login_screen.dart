@@ -70,99 +70,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Logo
-                    Container(
-                      width: 72, height: 72,
-                      decoration: BoxDecoration(
-                        color: scheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(Icons.school_rounded, size: 40, color: scheme.onPrimaryContainer),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'EtlabPro',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Sign in with your Etlab credentials',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: scheme.onSurfaceVariant),
-                    ),
+                    _LoginHeader(scheme: scheme),
                     const SizedBox(height: 36),
-
-                    TextFormField(
-                      controller: _userCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Username',
-                        prefixIcon: Icon(Icons.person_outline),
-                      ),
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.username],
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your username' : null,
-                    ),
-                    const SizedBox(height: 14),
-
-                    TextFormField(
-                      controller: _passCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                        ),
-                      ),
-                      obscureText: _obscure,
-                      textInputAction: TextInputAction.done,
-                      autofillHints: const [AutofillHints.password],
-                      onFieldSubmitted: (_) => _submit(),
-                      validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
+                    _CredentialsFields(
+                      userCtrl: _userCtrl,
+                      passCtrl: _passCtrl,
+                      obscure: _obscure,
+                      onToggleObscure: () => setState(() => _obscure = !_obscure),
+                      onSubmit: _submit,
                     ),
                     const SizedBox(height: 12),
-
-                    // Error
-                    AnimatedSize(
-                      duration: const Duration(milliseconds: 200),
-                      child: auth.error != null
-                          ? Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: scheme.errorContainer,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.error_outline, color: scheme.error, size: 18),
-                                  const SizedBox(width: 8),
-                                  Expanded(child: Text(auth.error!, style: TextStyle(color: scheme.onErrorContainer))),
-                                ],
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-
+                    _AuthErrorBanner(error: auth.error, scheme: scheme),
                     const SizedBox(height: 12),
-
-                    FilledButton(
-                      onPressed: auth.isLoading ? null : _submit,
-                      child: auth.isLoading
-                          ? const SizedBox(
-                              height: 22, width: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                            )
-                          : const Text('Sign In'),
-                    ),
-
+                    _SubmitButton(isLoading: auth.isLoading, onPressed: _submit),
                     const SizedBox(height: 24),
-                    Text(
-                      'Your credentials are stored securely on your device\nand sent only to the EtlabPro backend.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                    ),
+                    const _FooterNote(),
                   ],
                 ),
               ),
@@ -170,6 +92,157 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LoginHeader extends StatelessWidget {
+  final ColorScheme scheme;
+
+  const _LoginHeader({required this.scheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Icon(Icons.school_rounded, size: 40, color: scheme.onPrimaryContainer),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'EtlabPro',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Sign in with your Etlab credentials',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: scheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
+class _CredentialsFields extends StatelessWidget {
+  final TextEditingController userCtrl;
+  final TextEditingController passCtrl;
+  final bool obscure;
+  final VoidCallback onToggleObscure;
+  final VoidCallback onSubmit;
+
+  const _CredentialsFields({
+    required this.userCtrl,
+    required this.passCtrl,
+    required this.obscure,
+    required this.onToggleObscure,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TextFormField(
+          controller: userCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Username',
+            prefixIcon: Icon(Icons.person_outline),
+          ),
+          textInputAction: TextInputAction.next,
+          autofillHints: const [AutofillHints.username],
+          validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your username' : null,
+        ),
+        const SizedBox(height: 14),
+        TextFormField(
+          controller: passCtrl,
+          decoration: InputDecoration(
+            labelText: 'Password',
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+              icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+              onPressed: onToggleObscure,
+            ),
+          ),
+          obscureText: obscure,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.password],
+          onFieldSubmitted: (_) => onSubmit(),
+          validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
+        ),
+      ],
+    );
+  }
+}
+
+class _AuthErrorBanner extends StatelessWidget {
+  final String? error;
+  final ColorScheme scheme;
+
+  const _AuthErrorBanner({required this.error, required this.scheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      child: error != null
+          ? Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: scheme.errorContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: scheme.error, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(error!, style: TextStyle(color: scheme.onErrorContainer))),
+                ],
+              ),
+            )
+          : const SizedBox.shrink(),
+    );
+  }
+}
+
+class _SubmitButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  const _SubmitButton({required this.isLoading, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton(
+      onPressed: isLoading ? null : onPressed,
+      child: isLoading
+          ? const SizedBox(
+              height: 22,
+              width: 22,
+              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+            )
+          : const Text('Sign In'),
+    );
+  }
+}
+
+class _FooterNote extends StatelessWidget {
+  const _FooterNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'Your credentials are stored securely on your device\nand sent only to the EtlabPro backend.',
+      textAlign: TextAlign.center,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
     );
   }
 }
