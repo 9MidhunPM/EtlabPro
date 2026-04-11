@@ -79,6 +79,10 @@ class RefreshResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class LatestVersionResponse(BaseModel):
+    latest_version: str
+
+
 class LiveScrapeRequest(BaseModel):
     username: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
@@ -310,6 +314,18 @@ def _university_result_changes(previous_rows: list[dict], live_rows: list[dict])
             })
 
     return updates
+
+
+# ── PUBLIC: GET /meta/latest-version ────────────────────────────────
+
+@router.get(
+    "/meta/latest-version",
+    response_model=LatestVersionResponse,
+    summary="Get latest supported frontend app version",
+)
+def get_latest_version() -> LatestVersionResponse:
+    settings = get_settings()
+    return LatestVersionResponse(latest_version=settings.LATEST_FRONTEND_VERSION)
 
 
 # ── PUBLIC: POST /auth/login ─────────────────────────────────────────

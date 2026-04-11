@@ -8,6 +8,7 @@ import 'services/auth_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/student_data.dart';
 import 'services/theme_notifier.dart';
+import 'widgets/latest_version_guard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,7 +54,9 @@ class EtlabProApp extends StatelessWidget {
           routerConfig: router,
           debugShowCheckedModeBanner: false,
           builder: (context, child) {
-            return child ?? const SizedBox();
+            return LatestVersionGuard(
+              child: child ?? const SizedBox(),
+            );
           },
         );
       },

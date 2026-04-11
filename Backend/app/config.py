@@ -46,6 +46,10 @@ class Settings:
     # ── HTTP ─────────────────────────────────────────────────────────
     REQUEST_TIMEOUT: int = int(os.getenv("REQUEST_TIMEOUT", 90))
 
+    # ── Frontend version policy ──────────────────────────────────────
+    # If empty, backend will report no enforced version.
+    LATEST_FRONTEND_VERSION: str = os.getenv("LATEST_FRONTEND_VERSION", "").strip()
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

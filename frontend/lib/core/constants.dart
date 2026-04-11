@@ -11,6 +11,11 @@ class AppConstants {
     defaultValue: '',
   );
 
+  static const String _buildTimeAppVersion = String.fromEnvironment(
+    'APP_VERSION',
+    defaultValue: '',
+  );
+
   static String get baseUrl {
     final raw = (dotenv.env['API_BASE_URL'] ?? _buildTimeBaseUrl).trim();
     String resolved = raw;
@@ -29,6 +34,11 @@ class AppConstants {
   }
 
   static String get apiV1 => '$baseUrl/api/v1';
+
+  /// Current frontend app version (from .env or --dart-define).
+  static String get appVersion {
+    return (dotenv.env['APP_VERSION'] ?? _buildTimeAppVersion).trim();
+  }
 
   // Secure-storage keys
   static const String kUsername     = 'etlab_username';
