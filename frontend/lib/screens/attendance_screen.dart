@@ -18,11 +18,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
   late final TabController _tabCtrl;
   DateTime _targetDate = DateTime.now().add(const Duration(days: 30));
   AttendanceAnalysis? _analysis;
+  bool _dutyLeaveLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
+    _tabCtrl = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -70,6 +71,31 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
     messenger.showSnackBar(const SnackBar(content: Text('Attendance updated'), duration: Duration(milliseconds: 900)));
   }
 
+  Future<void> _fetchDutyLeaveAttendance() async {
+    final data = context.read<StudentData>();
+    final auth = context.read<AuthService>();
+
+    if (auth.username == null || auth.password == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Session not ready. Please login again.')));
+      return;
+    }
+
+    setState(() => _dutyLeaveLoading = true);
+    try {
+      await data.fetchLiveDutyLeaveAttendance(auth.username!, auth.password!);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Duty leave attendance updated'), duration: Duration(milliseconds: 900)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+    } finally {
+      if (mounted) setState(() => _dutyLeaveLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = context.watch<StudentData>();
@@ -91,7 +117,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                       unselectedLabelColor: scheme.onPrimary.withAlpha(160),
                       indicatorColor: scheme.onPrimary,
                       dividerColor: Colors.transparent,
-                      tabs: const [Tab(text: 'Attendance'), Tab(text: 'Analysis')],
+                      tabs: const [Tab(text: 'Attendance'), Tab(text: 'Analysis'), Tab(text: 'Duty Leave')],
                     ),
                   ),
                   Padding(
@@ -117,6 +143,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> with SingleTickerPr
                   analysis: _analysis,
                   onPickDate: _pickDate,
                   onAnalyze: _analyze,
+                ),
+                _DutyLeaveTab(
+                  data: data,
+                  scheme: scheme,
+                  isLoading: _dutyLeaveLoading,
+                  onRefresh: _fetchDutyLeaveAttendance,
                 ),
               ],
             ),
@@ -762,6 +794,211 @@ class _ProjectionTable extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Duty Leave Tab ────────────────────────────────────────────────────
+
+class _DutyLeaveTab extends StatelessWidget {
+  final StudentData data;
+  final ColorScheme scheme;
+  final bool isLoading;
+  final Future<void> Function() onRefresh;
+  const _DutyLeaveTab({
+    required this.data,
+    required this.scheme,
+    required this.isLoading,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = data.dutyLeaveAttendance;
+
+    if (rows.isEmpty && !isLoading) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.info_outline, size: 56, color: scheme.onSurfaceVariant.withAlpha(100)),
+            const SizedBox(height: 12),
+            Text('No duty leave data available', style: TextStyle(color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.refresh),
+              label: const Text('Fetch Duty Leave'),
+              onPressed: onRefresh,
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Calculate summary statistics
+    int totalDutyLeaves = 0;
+    Map<String, int> subjectDutyLeaveCounts = {};
+    
+    for (final row in rows) {
+      if (row['duty_leave'] != null && row['duty_leave'] is int) {
+        totalDutyLeaves += row['duty_leave'] as int;
+        final subject = row['subject_name']?.toString() ?? 'Unknown';
+        subjectDutyLeaveCounts[subject] = (subjectDutyLeaveCounts[subject] ?? 0) + (row['duty_leave'] as int);
+      }
+    }
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          // Summary Card
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.orange.withAlpha(20),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.orange.withAlpha(60)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.assignment_outlined, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    Text('Duty Leave Summary',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.orange)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withAlpha(40),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Text(
+                          totalDutyLeaves.toString(),
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Total Duty Leaves',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // By Subject
+          if (subjectDutyLeaveCounts.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('By Subject', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...subjectDutyLeaveCounts.entries.map((e) {
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withAlpha(30),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.withAlpha(60)),
+                        ),
+                        child: Center(
+                          child: Text(
+                            e.value.toString(),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              e.key,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '${e.value} duty leave${e.value > 1 ? 's' : ''}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withAlpha(30),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'DL',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ] else
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'No subject-wise duty leave data',
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ),
+            ),
         ],
       ),
     );

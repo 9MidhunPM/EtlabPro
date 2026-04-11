@@ -18,6 +18,12 @@ class StudentData extends ChangeNotifier {
   List<dynamic> timetable         = [];
   String? shrNumber;
 
+  // ── New endpoints data ─────────────────────────────────────────────
+  List<dynamic> dutyLeaveAttendance = [];
+  List<dynamic> monthlyAttendance = [];
+  Map<String, dynamic>? updates;
+  Map<String, dynamic>? attendanceMetadata;
+
   bool isLoading = false;
   String? error;
   final Set<String> _loadingSections = <String>{};
@@ -206,7 +212,88 @@ class StudentData extends ChangeNotifier {
     await loadAll(roll, force: true);
   }
 
-  // ── Cache helpers ──────────────────────────────────────────────────
+  // ── Live endpoints (duty leave, monthly attendance, updates) ────────
+
+  Future<Map<String, dynamic>> fetchLiveDutyLeaveAttendance(String username, String password) async {
+    try {
+      final result = await ApiClient.instance.post('/live/attendance-duty-leave', {
+        'username': username,
+        'password': password,
+      });
+      dutyLeaveAttendance = (result as Map)['attendance'] as List? ?? [];
+      notifyListeners();
+      return result as Map<String, dynamic>;
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchLiveMonthlyAttendance({
+    required String username,
+    required String password,
+    String? semester,
+    String? month,
+    String? year,
+  }) async {
+    try {
+      final result = await ApiClient.instance.post('/live/monthly-attendance', {
+        'username': username,
+        'password': password,
+        'semester': semester,
+        'month': month,
+        'year': year,
+      });
+      monthlyAttendance = (result as Map)['months'] as List? ?? [];
+      notifyListeners();
+      return result as Map<String, dynamic>;
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchLiveUpdates({
+    required String username,
+    required String password,
+    bool includeUniversityResults = true,
+  }) async {
+    try {
+      final result = await ApiClient.instance.post('/live/updates', {
+        'username': username,
+        'password': password,
+        'include_university_results': includeUniversityResults,
+      });
+      updates = result as Map<String, dynamic>;
+      notifyListeners();
+      return result;
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchAttendanceMetadata({
+    required String username,
+    required String password,
+  }) async {
+    try {
+      final result = await ApiClient.instance.post('/live/attendance-metadata', {
+        'username': username,
+        'password': password,
+      });
+      attendanceMetadata = result as Map<String, dynamic>;
+      notifyListeners();
+      return result;
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
 
   Future<bool> _isStale(String key, Duration ttl) async {
     final ts = await _secureStorage.read(key: key);
@@ -233,6 +320,8 @@ class StudentData extends ChangeNotifier {
   Future<void> clear() async {
     profile = summary = shrNumber = null;
     attendance = marks = universityResults = timetable = [];
+    dutyLeaveAttendance = monthlyAttendance = [];
+    updates = attendanceMetadata = null;
     error = null;
     final prefs = await SharedPreferences.getInstance();
     for (final k in [

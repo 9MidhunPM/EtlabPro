@@ -1,9 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:local_auth/local_auth.dart';
 
 class LockService extends ChangeNotifier with WidgetsBindingObserver {
-  final _auth = LocalAuthentication();
+  // Note: local_auth package not installed. Biometric auth disabled.
   bool _locked = false;
   bool get isLocked => _locked;
 
@@ -21,23 +20,9 @@ class LockService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> authenticate() async {
     try {
-      final supported = await _auth.isDeviceSupported();
-      if (!supported) {
-        _locked = false;
-        notifyListeners();
-        return;
-      }
-      final didAuth = await _auth.authenticate(
-        localizedReason: 'Authenticate to access EtlabPro',
-        options: const AuthenticationOptions(
-          biometricOnly: false,
-          stickyAuth: true,
-        ),
-      );
-      if (didAuth) {
-        _locked = false;
-        notifyListeners();
-      }
+      // Biometric authentication not available (local_auth package not installed)
+      _locked = false;
+      notifyListeners();
     } on PlatformException {
       _locked = false;
       notifyListeners();

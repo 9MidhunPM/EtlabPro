@@ -9,6 +9,8 @@ import '../screens/attendance_screen.dart';
 import '../screens/marks_screen.dart';
 import '../screens/uni_results_screen.dart';
 import '../screens/timetable_screen.dart';
+import '../screens/monthly_attendance_screen.dart';
+import '../screens/updates_screen.dart';
 
 GoRouter buildRouter(AuthService auth) {
   return GoRouter(
@@ -41,7 +43,13 @@ GoRouter buildRouter(AuthService auth) {
             GoRoute(path: '/attendance', builder: (ctx, _) => const AttendanceScreen()),
           ]),
           StatefulShellBranch(routes: [
+            GoRoute(path: '/monthly-attendance', builder: (ctx, _) => const MonthlyAttendanceScreen()),
+          ]),
+          StatefulShellBranch(routes: [
             GoRoute(path: '/marks', builder: (ctx, _) => const MarksScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/updates', builder: (ctx, _) => const UpdatesScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/results', builder: (ctx, _) => const UniResultsScreen()),

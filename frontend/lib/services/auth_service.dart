@@ -11,10 +11,14 @@ class AuthService extends ChangeNotifier {
   String? _rollNumber;
   String? _accessToken;
   String? _refreshToken;
+  String? _username;
+  String? _password;
   bool _isLoading = false;
   String? _error;
 
   String? get rollNumber    => _rollNumber;
+  String? get username      => _username;
+  String? get password      => _password;
   bool   get isLoggedIn     => _rollNumber != null && _accessToken != null;
   bool   get isLoading      => _isLoading;
   String? get error         => _error;
@@ -25,10 +29,14 @@ class AuthService extends ChangeNotifier {
     final roll    = await _storage.read(key: AppConstants.kRollNumber);
     final access  = await _storage.read(key: AppConstants.kAccessToken);
     final refresh = await _storage.read(key: AppConstants.kRefreshToken);
+    final user    = await _storage.read(key: AppConstants.kUsername);
+    final pass    = await _storage.read(key: AppConstants.kPassword);
     if (roll != null && access != null) {
       _rollNumber   = roll;
       _accessToken  = access;
       _refreshToken = refresh;
+      _username     = user;
+      _password     = pass;
       ApiClient.instance.setAccessToken(access);
       notifyListeners();
     }
@@ -62,6 +70,8 @@ class AuthService extends ChangeNotifier {
       _rollNumber   = roll;
       _accessToken  = access;
       _refreshToken = refresh;
+      _username     = username;
+      _password     = password;
       ApiClient.instance.setAccessToken(access);
       _isLoading = false;
       notifyListeners();
@@ -130,7 +140,7 @@ class AuthService extends ChangeNotifier {
 
   Future<void> logout() async {
     await _storage.deleteAll();
-    _rollNumber = _accessToken = _refreshToken = null;
+    _rollNumber = _accessToken = _refreshToken = _username = _password = null;
     ApiClient.instance.setAccessToken(null);
     notifyListeners();
   }
