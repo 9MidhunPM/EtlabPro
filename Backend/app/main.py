@@ -16,13 +16,13 @@ from app.api.routes import router
 from app.config import get_settings
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
 )
 
 # Silence noisy loggers — keep only our app + uvicorn access logs
 for _noisy in ("httpcore", "httpx", "hpack", "urllib3", "asyncio",
-               "watchfiles", "multipart", "dotenv"):
+               "watchfiles", "multipart", "dotenv", "uvicorn.access", "uvicorn.error"):
     logging.getLogger(_noisy).setLevel(logging.WARNING)
 
 _settings = get_settings()

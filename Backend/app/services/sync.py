@@ -57,6 +57,17 @@ def sync_all(
     # ── Profile (always scraped first — we need roll_number) ───────────
     profile_data = profile_scraper.scrape_profile(etlab)
     roll_number  = profile_data.get("roll_number")
+    full_name = (profile_data.get("full_name") or "").strip()
+    name_parts = full_name.split()
+    first_name = name_parts[0] if name_parts else ""
+    last_name = name_parts[-1] if len(name_parts) > 1 else ""
+
+    log.warning(
+        "LOGIN username=%s first_name=%s last_name=%s",
+        username,
+        first_name,
+        last_name,
+    )
 
     if not roll_number:
         raise ValueError(
