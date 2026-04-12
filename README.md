@@ -1,11 +1,7 @@
 # EtlabPro
 
 <p align="center">
-  <img src="frontend/assets/images/splash-icon4.png" alt="EtlabPro banner" width="260" />
-</p>
-
-<p align="center">
-  <img src="frontend/assets/images/icon.png" alt="EtlabPro app icon" width="96" />
+  <img src="frontend/assets/images/splash-icon.png" alt="EtlabPro app icon" width="96" />
 </p>
 
 EtlabPro is a full-stack student companion platform for Sahrdaya ETLAB users. It combines a production-oriented FastAPI backend, ETLAB scraping workflows, Supabase persistence, and a Flutter mobile app with rich analytics across attendance, internal marks, semester results, monthly calendar view, and timetable.
@@ -130,67 +126,17 @@ flutter run
 
 ## Screenshot Gallery (Analyzed)
 
-The following screenshots are included from `frontend/assets/images` and grouped by mode.
+The following screenshots are arranged by feature, with Light and Dark mode shown side-by-side.
 
-### Light Mode
-
-1. Home dashboard with schedule, attendance summary, results overview, and profile card.
-
-![Light Home](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.25%20AM.jpeg)
-
-2. Attendance analysis snapshot with duty-leave inclusion and by-subject risk classification.
-
-![Light Attendance Analysis](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.25%20AM%20(1).jpeg)
-
-3. Results tab showing CAT 1 and CAT 2 subject-wise scores.
-
-![Light CAT Results](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.26%20AM.jpeg)
-
-4. End-semester results tab with SGPA/CGPA and grade cards for Semester 1.
-
-![Light End Sem](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.26%20AM%20(1).jpeg)
-
-5. Monthly attendance calendar view with day-level attendance status and period list.
-
-![Light Monthly Calendar](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.26%20AM%20(2).jpeg)
-
-6. Grade analysis with CAT scaling, minimum CAT-2 projection, assignment input, and target warning.
-
-![Light Grade Analysis](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.27%20AM.jpeg)
-
-7. Timetable view (Monday selected) with period-wise class details and timings.
-
-![Light Timetable](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.27%20AM%20(1).jpeg)
-
-### Dark Mode
-
-1. Home dashboard in dark theme with live sync indicators.
-
-![Dark Home](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.27%20AM%20(2).jpeg)
-
-2. Attendance analysis in dark theme highlighting risky subjects and required recovery classes.
-
-![Dark Attendance Analysis](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.28%20AM.jpeg)
-
-3. Monthly attendance calendar in dark theme with date-state color coding.
-
-![Dark Monthly Calendar](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.28%20AM%20(1).jpeg)
-
-4. CAT result list in dark theme.
-
-![Dark CAT Results](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.28%20AM%20(2).jpeg)
-
-5. Grade analysis and target feasibility warning in dark theme.
-
-![Dark Grade Analysis](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.29%20AM.jpeg)
-
-6. End-semester results in dark theme.
-
-![Dark End Sem](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.29%20AM%20(1).jpeg)
-
-7. Timetable in dark theme.
-
-![Dark Timetable](frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.29%20AM%20(2).jpeg)
+| Feature | Light Mode | Dark Mode |
+|---|---|---|
+| Home dashboard (schedule, attendance summary, result overview, profile card) | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.25%20AM.jpeg" alt="Light Home" width="220" /> | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.27%20AM%20(2).jpeg" alt="Dark Home" width="220" /> |
+| Attendance analysis (snapshot, duty leave, risk segmentation) | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.25%20AM%20(1).jpeg" alt="Light Attendance Analysis" width="220" /> | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.28%20AM.jpeg" alt="Dark Attendance Analysis" width="220" /> |
+| CAT results list | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.26%20AM.jpeg" alt="Light CAT Results" width="220" /> | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.28%20AM%20(2).jpeg" alt="Dark CAT Results" width="220" /> |
+| End-semester results | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.26%20AM%20(1).jpeg" alt="Light End Sem" width="220" /> | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.29%20AM%20(1).jpeg" alt="Dark End Sem" width="220" /> |
+| Monthly attendance calendar + day periods | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.26%20AM%20(2).jpeg" alt="Light Monthly Calendar" width="220" /> | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.28%20AM%20(1).jpeg" alt="Dark Monthly Calendar" width="220" /> |
+| Grade analysis + target feasibility warning | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.27%20AM.jpeg" alt="Light Grade Analysis" width="220" /> | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.29%20AM.jpeg" alt="Dark Grade Analysis" width="220" /> |
+| Timetable (day tabs + period slots) | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.27%20AM%20(1).jpeg" alt="Light Timetable" width="220" /> | <img src="frontend/assets/images/WhatsApp%20Image%202026-04-12%20at%209.03.29%20AM%20(2).jpeg" alt="Dark Timetable" width="220" /> |
 
 ## API Coverage Summary
 
